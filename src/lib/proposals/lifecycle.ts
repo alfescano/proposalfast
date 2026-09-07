@@ -3,6 +3,7 @@ import { writeAuditLog } from "@/lib/audit";
 import { notifyWorkspace } from "@/lib/notifications";
 import { mail, sendMail } from "@/lib/email";
 import { absoluteUrl } from "@/lib/site";
+import { isProposalExpired } from "@/lib/proposals/expiry";
 
 export async function acceptPublicProposal(input: {
   publicId: string;
@@ -24,6 +25,9 @@ export async function acceptPublicProposal(input: {
   }
   if (proposal.lockedAt || proposal.status === "SIGNED") {
     return { ok: false as const, error: "This proposal is already signed." };
+  }
+  if (isProposalExpired(proposal) || proposal.status === "EXPIRED") {
+    return { ok: false as const, error: "This proposal has expired." };
   }
   if (proposal.status === "DECLINED") {
     return { ok: false as const, error: "This proposal was declined." };

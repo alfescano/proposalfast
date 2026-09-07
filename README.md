@@ -70,6 +70,8 @@ openssl rand -base64 32
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | Background jobs |
 | `SEED_SAMPLE_DATA` | Dev-only demo user (default on locally) |
 | `PLATFORM_ADMIN_EMAILS` | Extra platform-admin emails for `/admin` |
+| `SENTRY_DSN` | Optional error reporting. Unset = no-op (no events, no SDK init). |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional shared rate limit. Unset = in-process map. |
 
 Without Resend, verification emails print to the server log (development only).
 
@@ -95,6 +97,7 @@ App: [http://127.0.0.1:43127](http://127.0.0.1:43127)
 ```bash
 npm test
 npm run build
+npm run test:e2e   # Playwright home + login; skips if Chromium is not installed
 ```
 
 ## Stripe
@@ -164,6 +167,7 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 | `npm run build` | `prisma generate` + `next build` |
 | `npm start` | Production server on 43127 |
 | `npm test` | Vitest (auth, RBAC, isolation, proposal lifecycle, Prisma smoke) |
+| `npm run test:e2e` | Playwright marketing + login smoke; exits 0 if browsers are missing |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Seed plans, templates, optional sample data |
 | `npm run lint` | ESLint |
@@ -177,3 +181,24 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 - Clients view proposals at `/p/[publicId]` without an account.
 - `/admin` is platform operators only (`User.platformAdmin` or `PLATFORM_ADMIN_EMAILS`).
 - Team invites use Owner / Admin / Member / Viewer with server-side checks.
+- Client comments are opt-in per proposal and attach to the current version.
+- After `expiresAt`, the portal shows expired and refuses accept/sign; the owner can extend.
+
+See [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) for the success-criteria map and Alfredo’s production keys.
+
+## Sentry (optional)
+
+Set `SENTRY_DSN` to a real Sentry project DSN. `src/instrumentation.ts` calls `Sentry.init` only when that variable is present. `src/lib/sentry.ts` (`captureException`) is a no-op otherwise. Do not set a placeholder DSN.
+
+## Upstash rate limits (optional)
+
+Set both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. `rateLimit()` uses Redis `INCR` + `PEXPIRE`. If the call fails, it falls back to the in-process map so a Redis outage does not take down auth.
+
+## Playwright
+
+```bash
+npx playwright install --with-deps chromium
+npm run test:e2e
+```
+
+CI images without browsers should still pass: the wrapper prints a skip message and exits 0. `npm test` never launches a browser.

@@ -299,7 +299,7 @@ export async function registerFromInviteAction(
   }
 
   try {
-    assertRateLimit(`register-invite:${parsed.data.email}`, 8);
+    await assertRateLimit(`register-invite:${parsed.data.email}`, 8);
     const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
     if (exists) {
       return { ok: false, error: "An account with that email already exists. Sign in to accept." };

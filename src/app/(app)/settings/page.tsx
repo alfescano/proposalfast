@@ -70,6 +70,7 @@ export default async function SettingsPage() {
               notifySigned: ctx.organization.settings?.notifySigned ?? true,
               notifyPaid: ctx.organization.settings?.notifyPaid ?? true,
               notifySubscription: ctx.organization.settings?.notifySubscription ?? true,
+              notifyComment: ctx.organization.settings?.notifyComment ?? true,
             }}
           />
           <SettingsForm

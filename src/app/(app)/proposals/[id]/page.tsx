@@ -5,6 +5,7 @@ import { requireOrg } from "@/lib/org";
 import { absoluteUrl } from "@/lib/site";
 import { ProposalEditor } from "@/components/app/proposal-editor";
 import { isProposalLocked } from "@/lib/proposal-lock";
+import { isProposalExpired } from "@/lib/proposals/expiry";
 import { canWriteProposals } from "@/lib/rbac";
 import type { ScoreDimensions } from "@/lib/ai/schemas";
 
@@ -27,6 +28,7 @@ export default async function ProposalDetailPage({
         take: 1,
         include: { sections: { orderBy: { sortOrder: "asc" } } },
       },
+      comments: { orderBy: { createdAt: "desc" }, include: { version: true } },
     },
   });
   if (!proposal) notFound();
@@ -53,13 +55,15 @@ export default async function ProposalDetailPage({
           clientId: proposal.clientId,
           publicId: proposal.publicId,
           portalUrl: absoluteUrl(`/p/${proposal.publicId}`),
-          validUntil: proposal.validUntil?.toISOString().slice(0, 10) ?? "",
+          validUntil: (proposal.expiresAt ?? proposal.validUntil)?.toISOString().slice(0, 10) ?? "",
           locked: isProposalLocked(proposal),
+          expired: isProposalExpired(proposal) || proposal.status === "EXPIRED",
           paymentEnabled: proposal.paymentEnabled,
           paymentMode: proposal.paymentMode,
           amount: proposal.amountCents != null ? String(proposal.amountCents / 100) : "",
           depositPercent: proposal.depositPercent != null ? String(proposal.depositPercent) : "",
           followUpOptIn: proposal.followUpOptIn,
+          commentsEnabled: proposal.commentsEnabled,
         }}
         clients={clients.map((client) => ({
           id: client.id,
@@ -67,11 +71,20 @@ export default async function ProposalDetailPage({
         }))}
         sections={(version?.sections ?? []).map((section) => ({
           id: section.id,
+          type: section.type,
           title: section.title,
           body:
             section.content && typeof section.content === "object" && "body" in section.content
               ? String((section.content as { body?: string }).body ?? "")
               : "",
+        }))}
+        comments={proposal.comments.map((comment) => ({
+          id: comment.id,
+          authorName: comment.authorName,
+          authorEmail: comment.authorEmail,
+          body: comment.body,
+          createdAt: comment.createdAt.toISOString(),
+          versionLabel: comment.version ? `v${comment.version.version}` : "current",
         }))}
         score={score ?? null}
         canWrite={canWrite}

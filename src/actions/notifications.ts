@@ -32,6 +32,7 @@ export async function updateNotificationPrefsAction(formData: FormData) {
     notifySigned: formData.get("notifySigned") === "on",
     notifyPaid: formData.get("notifyPaid") === "on",
     notifySubscription: formData.get("notifySubscription") === "on",
+    notifyComment: formData.get("notifyComment") === "on",
   };
   await prisma.settings.upsert({
     where: { organizationId: ctx.organization.id },

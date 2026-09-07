@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "anon";
-  const limited = rateLimit({ key: `contact:${ip}`, limit: 5, windowMs: 60_000 });
+  const limited = await rateLimit({ key: `contact:${ip}`, limit: 5, windowMs: 60_000 });
   if (!limited.ok) {
     return NextResponse.json({ error: "Too many messages. Try again shortly." }, { status: 429 });
   }

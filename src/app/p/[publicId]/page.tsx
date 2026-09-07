@@ -5,6 +5,10 @@ import { prisma } from "@/lib/db";
 import { chargeAmountCents, paymentLabel } from "@/lib/payments";
 import { recordProposalView } from "@/lib/proposals/record-view";
 import { SignPayPanel } from "@/components/public/sign-pay";
+import { PublicCommentForm } from "@/components/public/comment-form";
+import { isProposalExpired, statusAfterExpiry } from "@/lib/proposals/expiry";
+import { sectionBody } from "@/lib/proposals/render-block";
+import { blockLabel } from "@/lib/proposals/blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -46,18 +50,28 @@ export default async function PublicProposalPage({
   });
   if (!proposal) notFound();
 
-  const headerList = await headers();
-  const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim();
-  await recordProposalView({
-    proposalId: proposal.id,
-    organizationId: proposal.organizationId,
-    title: proposal.title,
-    status: proposal.status,
-    viewedAt: proposal.viewedAt,
-    ip,
-    userAgent: headerList.get("user-agent"),
-    referrer: headerList.get("referer"),
-  });
+  const expired = isProposalExpired(proposal) || proposal.status === "EXPIRED";
+  if (expired && proposal.status !== "EXPIRED" && proposal.status !== "SIGNED" && proposal.status !== "ACCEPTED") {
+    await prisma.proposal.update({
+      where: { id: proposal.id },
+      data: { status: statusAfterExpiry(proposal.status) },
+    });
+  }
+
+  if (!expired) {
+    const headerList = await headers();
+    const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim();
+    await recordProposalView({
+      proposalId: proposal.id,
+      organizationId: proposal.organizationId,
+      title: proposal.title,
+      status: proposal.status,
+      viewedAt: proposal.viewedAt,
+      ip,
+      userAgent: headerList.get("user-agent"),
+      referrer: headerList.get("referer"),
+    });
+  }
 
   const seller = proposal.organization.settings?.businessName || proposal.organization.name;
   const sections = proposal.versions[0]?.sections ?? [];
@@ -88,16 +102,39 @@ export default async function PublicProposalPage({
         {proposal.organization.settings?.tagline ? (
           <p className="mt-2 text-sm italic">{proposal.organization.settings.tagline}</p>
         ) : null}
+        {expired ? (
+          <p
+            className="mt-6 rounded-xl border border-[#8a7040] bg-[#fffdf8] px-4 py-3 text-sm text-[#152033]"
+            role="status"
+          >
+            This proposal has expired. Accepting and signing are disabled. Ask {seller} to extend the
+            date if you still want to proceed.
+          </p>
+        ) : null}
         <div id="proposal-body" className="mt-10 space-y-8" tabIndex={-1}>
           {sections.map((section) => {
-            const body =
-              section.content && typeof section.content === "object" && "body" in section.content
-                ? String((section.content as { body?: string }).body ?? "")
-                : "";
+            const body = sectionBody(section.content);
             return (
               <section key={section.id} className="rounded-2xl border border-[#e0d4bf] bg-[#fffdf8] p-6">
-                <h2 className="font-heading text-2xl">{section.title}</h2>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{body}</p>
+                {section.type === "heading" ? (
+                  <h2 className="font-heading text-3xl">{section.title}</h2>
+                ) : (
+                  <div>
+                    <p className="text-[11px] tracking-[0.16em] text-[#5c4a24] uppercase">
+                      {blockLabel(section.type)}
+                    </p>
+                    <h2 className="mt-1 font-heading text-2xl">{section.title}</h2>
+                  </div>
+                )}
+                {section.type === "pricing" ? (
+                  <p className="mt-3 rounded-lg border border-[#e0d4bf] bg-white px-4 py-3 text-sm leading-7 whitespace-pre-wrap">
+                    {body}
+                  </p>
+                ) : section.type === "signature" ? (
+                  <p className="mt-3 border-t border-[#c4b396] pt-6 text-sm italic">{body}</p>
+                ) : (
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{body}</p>
+                )}
               </section>
             );
           })}
@@ -113,12 +150,22 @@ export default async function PublicProposalPage({
             publicId={proposal.publicId}
             alreadySigned={Boolean(proposal.lockedAt || proposal.signatures[0])}
             alreadyAccepted={Boolean(proposal.acceptedAt)}
-            paymentEnabled={proposal.paymentEnabled && charge != null}
+            expired={expired}
+            paymentEnabled={proposal.paymentEnabled && charge != null && !expired}
             amountLabel={amountLabel}
             signerDefaultName={proposal.client?.name ?? undefined}
             signerDefaultEmail={proposal.client?.email ?? undefined}
           />
         </div>
+        {proposal.commentsEnabled ? (
+          <div className="mt-10">
+            <PublicCommentForm
+              publicId={proposal.publicId}
+              defaultName={proposal.client?.name ?? undefined}
+              defaultEmail={proposal.client?.email ?? undefined}
+            />
+          </div>
+        ) : null}
       </div>
     </main>
   );

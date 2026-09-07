@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs", "inngest"],
+  serverExternalPackages: ["@prisma/client", "bcryptjs", "inngest", "@upstash/redis", "@sentry/nextjs"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },

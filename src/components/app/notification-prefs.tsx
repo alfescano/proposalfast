@@ -11,6 +11,7 @@ const fields = [
   { name: "notifySigned", label: "Proposal signed" },
   { name: "notifyPaid", label: "Payment received" },
   { name: "notifySubscription", label: "Subscription failed" },
+  { name: "notifyComment", label: "Client comments" },
 ] as const;
 
 export function NotificationPrefs({

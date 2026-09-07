@@ -6,16 +6,20 @@ export type NotificationType =
   | "accepted"
   | "signed"
   | "paid"
-  | "subscription_failed";
+  | "subscription_failed"
+  | "comment";
 
-const PREF: Record<NotificationType, "notifyOpened" | "notifyAccepted" | "notifySigned" | "notifyPaid" | "notifySubscription"> =
-  {
-    opened: "notifyOpened",
-    accepted: "notifyAccepted",
-    signed: "notifySigned",
-    paid: "notifyPaid",
-    subscription_failed: "notifySubscription",
-  };
+const PREF: Record<
+  NotificationType,
+  "notifyOpened" | "notifyAccepted" | "notifySigned" | "notifyPaid" | "notifySubscription" | "notifyComment"
+> = {
+  opened: "notifyOpened",
+  accepted: "notifyAccepted",
+  signed: "notifySigned",
+  paid: "notifyPaid",
+  subscription_failed: "notifySubscription",
+  comment: "notifyComment",
+};
 
 export async function notifyWorkspace(input: {
   organizationId: string;

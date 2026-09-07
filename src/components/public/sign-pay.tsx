@@ -15,6 +15,7 @@ export function SignPayPanel({
   publicId,
   alreadySigned,
   alreadyAccepted,
+  expired = false,
   paymentEnabled,
   amountLabel,
   signerDefaultName,
@@ -23,6 +24,7 @@ export function SignPayPanel({
   publicId: string;
   alreadySigned: boolean;
   alreadyAccepted: boolean;
+  expired?: boolean;
   paymentEnabled: boolean;
   amountLabel: string | null;
   signerDefaultName?: string;
@@ -107,6 +109,17 @@ export function SignPayPanel({
     setPending(false);
     if (!result.ok) setError(result.error);
     else window.location.href = result.url;
+  }
+
+  if (expired && !signed) {
+    return (
+      <div className="rounded-2xl border border-[#8a7040] bg-[#fffdf8] p-6 text-sm text-[#152033]" role="status">
+        <p className="font-medium">Expired</p>
+        <p className="mt-2 text-[#3d4a5c]">
+          Accepting and signing are closed. Contact the sender if you need a new date.
+        </p>
+      </div>
+    );
   }
 
   if (signed) {

@@ -309,6 +309,7 @@ model Proposal {
   status         ProposalStatus @default(DRAFT)
   currency       String         @default("USD")
   validUntil     DateTime?
+  expiresAt      DateTime?
   sentAt         DateTime?
   viewedAt       DateTime?
   signedAt       DateTime?
@@ -318,8 +319,9 @@ model Proposal {
   paymentMode    PaymentMode    @default(FULL)
   amountCents    Int?
   depositPercent Int?
-  followUpOptIn  Boolean        @default(false)
-  createdById    String
+  followUpOptIn    Boolean @default(false)
+  commentsEnabled  Boolean @default(false)
+  createdById      String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?
@@ -335,6 +337,7 @@ model Proposal {
   payments     Payment[]
   followUps    FollowUp[]
   files        File[]
+  comments     ProposalComment[]
 
   @@index([organizationId, status, deletedAt])
   @@index([organizationId, clientId])
@@ -354,6 +357,7 @@ model ProposalVersion {
   proposal   Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   sections   ProposalSection[]
   signatures Signature[]
+  comments   ProposalComment[]
 
   @@unique([proposalId, version])
   @@index([proposalId])
@@ -393,6 +397,22 @@ model ProposalTemplate {
 
   @@index([organizationId, deletedAt])
   @@index([isSystem, category])
+}
+
+model ProposalComment {
+  id          String   @id @default(cuid())
+  proposalId  String
+  versionId   String?
+  authorName  String
+  authorEmail String
+  body        String   @db.Text
+  createdAt   DateTime @default(now())
+
+  proposal Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  version  ProposalVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@index([proposalId, createdAt])
+  @@index([versionId])
 }
 
 model ProposalView {
@@ -579,6 +599,7 @@ model Settings {
   notifySigned        Boolean  @default(true)
   notifyPaid          Boolean  @default(true)
   notifySubscription  Boolean  @default(true)
+  notifyComment       Boolean  @default(true)
   extras              Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt

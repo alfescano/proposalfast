@@ -209,6 +209,24 @@ export function subscriptionFailedEmail(input: { name: string; settingsUrl: stri
   return { subject: "ProposalFast payment failed", html, text };
 }
 
+export function proposalCommentEmail(input: {
+  ownerName: string;
+  authorName: string;
+  title: string;
+  body: string;
+  dashboardUrl: string;
+}) {
+  const text = `${input.authorName} commented on “${input.title}”:\n\n${input.body}\n\n${input.dashboardUrl}`;
+  const { html } = wrap(
+    "New comment on your proposal",
+    `<p>Hi ${escapeHtml(input.ownerName)},</p>
+     <p>${escapeHtml(input.authorName)} left a comment on <em>${escapeHtml(input.title)}</em>.</p>
+     <p style="white-space:pre-wrap;border-left:3px solid #c9a227;padding-left:12px;">${escapeHtml(input.body)}</p>
+     ${button(input.dashboardUrl, "Open proposal")}`,
+  );
+  return { subject: `Comment: ${input.title}`, html, text };
+}
+
 export function followUpEmail(input: {
   clientName: string;
   senderName: string;

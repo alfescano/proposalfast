@@ -119,7 +119,7 @@ export async function createProposalAction(formData: FormData) {
   const brief = parsed.data.brief?.trim();
   if (parsed.data.useAi && brief && brief.length >= 20) {
     try {
-      assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
+      await assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
     } catch (error) {
       if (error instanceof RateLimitError) {
         return { ok: true as const, id: proposal.id, warning: error.message };
@@ -177,6 +177,8 @@ export async function updateProposalMetaAction(proposalId: string, formData: For
   const amount = String(formData.get("amount") ?? "");
   const depositPercent = String(formData.get("depositPercent") ?? "");
   const followUpOptIn = formData.get("followUpOptIn") === "on";
+  const commentsEnabled = formData.get("commentsEnabled") === "on";
+  const expiresAt = validUntil ? new Date(validUntil) : null;
 
   if (title.length < 3) {
     return { ok: false as const, error: "Title is too short." };
@@ -195,12 +197,20 @@ export async function updateProposalMetaAction(proposalId: string, formData: For
       title,
       clientId,
       currency,
-      validUntil: validUntil ? new Date(validUntil) : null,
+      validUntil: expiresAt,
+      expiresAt,
       paymentEnabled,
       paymentMode,
       amountCents: amount ? Math.round(Number(amount) * 100) : proposal.amountCents,
       depositPercent: depositPercent ? Number(depositPercent) : proposal.depositPercent,
       followUpOptIn,
+      commentsEnabled,
+      status:
+        expiresAt && expiresAt.getTime() > Date.now() && proposal.status === "EXPIRED"
+          ? proposal.viewedAt
+            ? "VIEWED"
+            : "SENT"
+          : proposal.status,
     },
   });
 
@@ -211,30 +221,77 @@ export async function updateProposalMetaAction(proposalId: string, formData: For
 
 export async function saveProposalSectionsAction(
   proposalId: string,
-  sections: { id: string; title: string; body: string }[],
+  sections: { id: string; title: string; body: string; type: string }[],
 ) {
   const ctx = await requireWritableOrg();
   const proposal = await prisma.proposal.findFirst({
     where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
-    include: { versions: { orderBy: { version: "desc" }, take: 1 } },
+    include: { versions: { orderBy: { version: "desc" }, take: 1, include: { sections: true } } },
   });
   if (!proposal) throw new TenantError();
   if (isProposalLocked(proposal)) throw new ProposalLockedError();
 
-  await prisma.$transaction(
-    sections.map((section) =>
-      prisma.proposalSection.update({
-        where: { id: section.id },
-        data: {
-          title: section.title,
-          content: { body: section.body, placeholders: extractPlaceholders(section.body) },
-        },
-      }),
-    ),
-  );
+  const version = proposal.versions[0];
+  if (!version) return { ok: false as const, error: "This proposal has no version to edit." };
+
+  const keepIds = sections.filter((section) => !section.id.startsWith("new_")).map((section) => section.id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.proposalSection.deleteMany({
+      where: keepIds.length
+        ? { versionId: version.id, id: { notIn: keepIds } }
+        : { versionId: version.id },
+    });
+
+    for (const [index, section] of sections.entries()) {
+      const data = {
+        title: section.title,
+        type: section.type || "paragraph",
+        sortOrder: index,
+        content: { body: section.body, placeholders: extractPlaceholders(section.body) },
+      };
+      if (section.id.startsWith("new_")) {
+        await tx.proposalSection.create({
+          data: { ...data, versionId: version.id },
+        });
+      } else {
+        await tx.proposalSection.update({
+          where: { id: section.id },
+          data,
+        });
+      }
+    }
+  });
 
   revalidatePath(`/proposals/${proposalId}`);
   return { ok: true as const };
+}
+
+export async function extendProposalAction(proposalId: string, days: number) {
+  const ctx = await requireWritableOrg();
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
+  });
+  if (!proposal) throw new TenantError();
+  if (proposal.lockedAt || proposal.status === "SIGNED") {
+    return { ok: false as const, error: "A signed proposal cannot be extended." };
+  }
+  const addDays = Number.isFinite(days) && days > 0 ? Math.min(days, 180) : 14;
+  const base = new Date();
+  const next = new Date(base.getTime() + addDays * 24 * 60 * 60 * 1000);
+  await prisma.proposal.update({
+    where: { id: proposalId },
+    data: {
+      expiresAt: next,
+      validUntil: next,
+      status: proposal.viewedAt ? "VIEWED" : proposal.sentAt ? "SENT" : proposal.status === "EXPIRED" ? "REVIEW" : proposal.status,
+    },
+  });
+  await prisma.proposalEvent.create({
+    data: { proposalId, type: "extended", metadata: { days: addDays } },
+  });
+  revalidatePath(`/proposals/${proposalId}`);
+  return { ok: true as const, expiresAt: next.toISOString() };
 }
 
 export async function archiveProposalAction(proposalId: string) {
@@ -307,7 +364,7 @@ export async function sendProposalAction(proposalId: string) {
 export async function queueProposalGenerationAction(formData: FormData) {
   const ctx = await requireWritableOrg();
   try {
-    assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
+    await assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
   } catch (error) {
     if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
     throw error;
@@ -394,7 +451,7 @@ export async function setProposalStatusAction(proposalId: string, status: Propos
 export async function rewriteSectionAction(formData: FormData) {
   const ctx = await requireWritableOrg();
   try {
-    assertRateLimit(`ai-rewrite:${ctx.organization.id}:${ctx.user.id}`, 20, 60_000);
+    await assertRateLimit(`ai-rewrite:${ctx.organization.id}:${ctx.user.id}`, 20, 60_000);
   } catch (error) {
     if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
     throw error;

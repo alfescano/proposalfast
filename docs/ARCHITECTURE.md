@@ -1,6 +1,6 @@
 # ProposalFast architecture
 
-ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document covers Phases 1–4: foundation, CRM/proposals, AI/e-sign/Stripe/PDF, then platform admin, teams, analytics, notifications, and security polish.
+ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document covers Phases 1–4 plus launch polish: comments, expiry, optional Sentry/Upstash, block editor, and the launch checklist.
 
 ## Stack choices
 
@@ -125,7 +125,8 @@ If `INNGEST_EVENT_KEY` is unset, proposal generation still runs inline when `OPE
 - Auth.js JWT cookies, `trustHost: true`, `Secure` in production (HTTPS).
 - Stripe: `constructEvent` with `STRIPE_WEBHOOK_SECRET`. Unsigned bodies are 400.
 - IP addresses on views/signatures are hashed with `AUTH_SECRET`.
-- Rate limits on register, login, forgot-password, contact, public sign/accept, and AI generate/rewrite (`src/lib/rate-limit.ts`). On Vercel, replace the in-process map with Upstash — same function signature.
+- Rate limits on register, login, forgot-password, contact, public sign/accept/comment, and AI generate/rewrite (`src/lib/rate-limit.ts`). Uses Upstash Redis when `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` are set; otherwise an in-process map. Redis errors fall back to memory.
+- Optional Sentry: `SENTRY_DSN` initializes `@sentry/nextjs` in `src/instrumentation.ts`. Unset = no-op.
 - Security headers in `next.config.ts`: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`.
 - Audit log on register, password reset, onboarding, client/proposal writes, team changes, account deletion, and Stripe events.
 - Owner data export at `GET /settings/export`. Last-owner account deletion archives the org, clients, and proposals, then anonymizes the user.
@@ -137,8 +138,12 @@ If `INNGEST_EVENT_KEY` is unset, proposal generation still runs inline when `OPE
 - **Accept** — name + email. Sets `ACCEPTED` / `acceptedAt` without locking.
 - **E-sign** — name, email, typed or drawn signature, consent checkbox. Persists `Signature` (version id, IP hash, user agent, timestamp) and locks every `ProposalVersion`. Further edits throw `ProposalLockedError`.
 - **Pay** — Stripe Checkout when `paymentEnabled` and an amount are set. Modes: FULL, DEPOSIT (% of `amountCents`), FIXED.
+- **Comments** — opt-in (`Proposal.commentsEnabled`). Stored on the current `ProposalVersion`. Owner email + in-app notification.
+- **Expiry** — `expiresAt` (synced with `validUntil`). After that instant the portal shows expired and refuses accept/sign. Owner extends from the editor.
 
 The portal uses skip-to-content, labeled fields, a named signature pad, and ink-on-paper contrast for keyboard and screen-reader use.
+
+Proposal blocks (heading, paragraph, pricing, signature, FAQ, plus legacy types) persist `type`, body, and `sortOrder`. The editor autosaves after 1.2s and can reorder.
 
 ## Stripe billing
 

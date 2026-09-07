@@ -8,6 +8,11 @@ import { chargeAmountCents } from "@/lib/payments";
 import { createProposalPaymentCheckout } from "@/lib/stripe/client";
 import { acceptPublicProposal, recordPublicSignature } from "@/lib/proposals/lifecycle";
 import { RateLimitError, assertRateLimit } from "@/lib/rate-limit";
+import { isProposalExpired } from "@/lib/proposals/expiry";
+import { notifyWorkspace } from "@/lib/notifications";
+import { mail, sendMail } from "@/lib/email";
+import { absoluteUrl } from "@/lib/site";
+import { writeAuditLog } from "@/lib/audit";
 
 const signSchema = z.object({
   publicId: z.string().min(6).max(40),
@@ -23,7 +28,7 @@ export async function acceptPublicProposalAction(formData: FormData) {
   const actorName = String(formData.get("signerName") ?? "").trim() || undefined;
   const actorEmail = String(formData.get("signerEmail") ?? "").trim() || undefined;
   try {
-    assertRateLimit(`portal-accept:${publicId}`, 20, 60_000);
+    await assertRateLimit(`portal-accept:${publicId}`, 20, 60_000);
   } catch (error) {
     if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
     throw error;
@@ -57,9 +62,12 @@ export async function signPublicProposalAction(formData: FormData) {
   if (proposal.lockedAt || proposal.status === "SIGNED") {
     return { ok: false as const, error: "This proposal is already signed." };
   }
+  if (isProposalExpired(proposal) || proposal.status === "EXPIRED") {
+    return { ok: false as const, error: "This proposal has expired." };
+  }
 
   try {
-    assertRateLimit(`portal-sign:${parsed.data.publicId}`, 12, 60_000);
+    await assertRateLimit(`portal-sign:${parsed.data.publicId}`, 12, 60_000);
   } catch (error) {
     if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
     throw error;
@@ -118,4 +126,92 @@ export async function startPublicPaymentAction(publicId: string) {
       error: error instanceof Error ? error.message : "Could not start payment.",
     };
   }
+}
+
+const commentSchema = z.object({
+  publicId: z.string().min(6).max(40),
+  authorName: z.string().trim().min(2).max(80),
+  authorEmail: z.string().trim().email().max(254).toLowerCase(),
+  body: z.string().trim().min(8).max(4000),
+});
+
+export async function addPublicCommentAction(formData: FormData) {
+  const parsed = commentSchema.safeParse({
+    publicId: formData.get("publicId"),
+    authorName: formData.get("authorName"),
+    authorEmail: formData.get("authorEmail"),
+    body: formData.get("body"),
+  });
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check your comment." };
+  }
+
+  try {
+    await assertRateLimit(`portal-comment:${parsed.data.publicId}:${parsed.data.authorEmail}`, 8, 60_000);
+  } catch (error) {
+    if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
+    throw error;
+  }
+
+  const proposal = await prisma.proposal.findFirst({
+    where: { publicId: parsed.data.publicId, deletedAt: null },
+    include: {
+      versions: { orderBy: { version: "desc" }, take: 1 },
+      organization: {
+        include: { members: { where: { role: "OWNER" }, include: { user: true } } },
+      },
+    },
+  });
+  if (!proposal) return { ok: false as const, error: "Proposal not found." };
+  if (!proposal.commentsEnabled) {
+    return { ok: false as const, error: "Comments are not enabled on this proposal." };
+  }
+
+  const versionId = proposal.versions[0]?.id ?? null;
+  const comment = await prisma.proposalComment.create({
+    data: {
+      proposalId: proposal.id,
+      versionId,
+      authorName: parsed.data.authorName,
+      authorEmail: parsed.data.authorEmail,
+      body: parsed.data.body,
+    },
+  });
+  await prisma.proposalEvent.create({
+    data: {
+      proposalId: proposal.id,
+      type: "commented",
+      metadata: { commentId: comment.id, versionId, authorEmail: parsed.data.authorEmail },
+    },
+  });
+  await writeAuditLog({
+    organizationId: proposal.organizationId,
+    action: "proposal.commented",
+    entityType: "ProposalComment",
+    entityId: comment.id,
+    metadata: { proposalId: proposal.id, versionId },
+  });
+
+  const owner = proposal.organization.members[0]?.user;
+  if (owner?.email) {
+    await sendMail(
+      owner.email,
+      mail.templates.proposalCommentEmail({
+        ownerName: owner.name ?? "there",
+        authorName: parsed.data.authorName,
+        title: proposal.title,
+        body: parsed.data.body,
+        dashboardUrl: absoluteUrl(`/proposals/${proposal.id}`),
+      }),
+    );
+  }
+  await notifyWorkspace({
+    organizationId: proposal.organizationId,
+    type: "comment",
+    title: "New client comment",
+    body: `${parsed.data.authorName} commented on “${proposal.title}”.`,
+    actionUrl: `/proposals/${proposal.id}`,
+  });
+
+  return { ok: true as const };
 }

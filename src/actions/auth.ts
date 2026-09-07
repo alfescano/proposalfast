@@ -21,7 +21,7 @@ import {
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function guard(key: string, limit = 8) {
-  assertRateLimit(key, limit, 60_000);
+  await assertRateLimit(key, limit, 60_000);
 }
 
 async function provisionWorkspace(input: {
