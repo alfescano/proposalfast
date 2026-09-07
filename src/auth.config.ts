@@ -5,7 +5,7 @@ const APP_PREFIXES = [
   "/onboarding",
   "/proposals",
   "/clients",
-  "/templates",
+  "/library",
   "/settings",
 ];
 
