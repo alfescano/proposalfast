@@ -1,6 +1,8 @@
 # ProposalFast deployment checklist
 
-**Do not deploy until the production readiness audit is green on keys and hosting.** This file is the operational list. It is not a substitute for `docs/PRODUCTION_READINESS_AUDIT.md`.
+**Click-path for Origin → Vercel → `proposalfast.com`:** [docs/GO_LIVE.md](GO_LIVE.md).
+
+This file is the operational list. It is not a substitute for `docs/PRODUCTION_READINESS_AUDIT.md`.
 
 Use this only after local `npm run build` and `npx prisma migrate status` are clean (they were on 2026-09-07).
 

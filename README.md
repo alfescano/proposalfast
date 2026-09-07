@@ -164,7 +164,9 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Next.js on port 43127 |
-| `npm run build` | `prisma generate` + `next build` |
+| `npm run build` | `prisma generate` + `next build` (local) |
+| `npm run build:production` | `prisma generate` + `prisma migrate deploy` + `next build` (Vercel) |
+| `npm run db:migrate:deploy` | `prisma migrate deploy` only |
 | `npm start` | Production server on 43127 |
 | `npm test` | Vitest (auth, RBAC, isolation, proposal lifecycle, Prisma smoke) |
 | `npm run test:e2e` | Playwright marketing + login smoke; exits 0 if browsers are missing |
@@ -184,9 +186,11 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 - Client comments are opt-in per proposal and attach to the current version.
 - After `expiresAt`, the portal shows expired and refuses accept/sign; the owner can extend.
 
-See [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) for the success-criteria map and Alfredo’s production keys.
+See [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) for the success-criteria map.
 
-**Do not deploy from this audit.** Read [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) and [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) first.
+**Go live:** [docs/GO_LIVE.md](docs/GO_LIVE.md) (Vercel ↔ Origin click-path, env **names**, DNS). Audit: [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md). Checklist: [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md).
+
+Production build (Vercel): `npm run build:production` → `prisma generate && prisma migrate deploy && next build`. Sample users never seed when `NODE_ENV` or `VERCEL_ENV` is `production`.
 
 ## Sentry (optional)
 

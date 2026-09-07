@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import { PLAN_CATALOG, stripePriceEnvFor } from "../src/lib/plans";
 import { SYSTEM_TEMPLATES } from "../src/lib/templates/catalog";
+import { shouldSeedSampleData } from "../src/lib/seed-policy";
 
 const prisma = new PrismaClient();
 
@@ -63,12 +64,8 @@ async function seedSystemTemplates() {
 }
 
 async function seedSampleData() {
-  if (process.env.NODE_ENV === "production" && process.env.SEED_SAMPLE_DATA !== "true") {
-    console.log("Skipping sample data (production).");
-    return;
-  }
-  if (process.env.SEED_SAMPLE_DATA === "false") {
-    console.log("Skipping sample data (SEED_SAMPLE_DATA=false).");
+  if (!shouldSeedSampleData()) {
+    console.log("Skipping sample data (production or SEED_SAMPLE_DATA=false).");
     return;
   }
 
