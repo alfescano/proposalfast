@@ -80,6 +80,8 @@ async function seedSampleData() {
       data: { platformAdmin: process.env.NODE_ENV !== "production" },
     });
     console.log("Sample user already exists:", email);
+    const freeExisting = await prisma.plan.findUnique({ where: { tier: PlanTier.FREE } });
+    if (freeExisting) await seedNonAdminMember(freeExisting.id);
     return;
   }
 
@@ -173,6 +175,48 @@ async function seedSampleData() {
   console.log("  email:    alex@proposalfast.dev");
   console.log("  password: DemoPassword123!");
   console.log("  org:      Northline Studio");
+
+  await seedNonAdminMember(free.id);
+}
+
+async function seedNonAdminMember(freePlanId: string) {
+  const email = "member@proposalfast.dev";
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { platformAdmin: false },
+    });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash("MemberPassword123!", 12);
+  const user = await prisma.user.create({
+    data: {
+      email,
+      name: "Jordan Member",
+      emailVerified: new Date(),
+      passwordHash,
+      platformAdmin: false,
+    },
+  });
+  await prisma.organization.create({
+    data: {
+      name: "Member Studio",
+      slug: "member-studio",
+      members: { create: { userId: user.id, role: "OWNER" } },
+      settings: {
+        create: {
+          businessName: "Member Studio",
+          onboardingCompleted: true,
+        },
+      },
+      subscription: { create: { planId: freePlanId, status: "ACTIVE" } },
+    },
+  });
+  console.log("Seeded DEV-ONLY non-admin user:");
+  console.log("  email:    member@proposalfast.dev");
+  console.log("  password: MemberPassword123!");
 }
 
 async function main() {

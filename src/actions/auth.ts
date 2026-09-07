@@ -1,63 +1,27 @@
 "use server";
 
-import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/auth";
 import { prisma } from "@/lib/db";
 import { generateToken, sha256 } from "@/lib/crypto";
 import { getEmailAdapter, mail } from "@/lib/email";
-import { writeAuditLog } from "@/lib/audit";
-import { uniqueOrgSlug } from "@/lib/slug";
 import { RateLimitError, assertRateLimit } from "@/lib/rate-limit";
 import { absoluteUrl } from "@/lib/site";
+import { registerAccount } from "@/lib/auth/register-account";
+import { changePasswordForUser } from "@/lib/auth/passwords";
+import { resetPasswordWithToken, verifyEmailWithToken } from "@/lib/auth/email-password";
 import {
+  changePasswordSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
   resetPasswordSchema,
-  verifyEmailSchema,
 } from "@/lib/validations/auth";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function guard(key: string, limit = 8) {
   await assertRateLimit(key, limit, 60_000);
-}
-
-async function provisionWorkspace(input: {
-  userId: string;
-  name: string;
-  organizationName: string;
-}) {
-  const slug = await uniqueOrgSlug(input.organizationName);
-  const free = await prisma.plan.findUnique({ where: { tier: "FREE" } });
-  if (!free) {
-    throw new Error("Plans are not seeded. Run `npx prisma db seed`.");
-  }
-
-  const organization = await prisma.organization.create({
-    data: {
-      name: input.organizationName,
-      slug,
-      members: {
-        create: { userId: input.userId, role: "OWNER" },
-      },
-      settings: {
-        create: {
-          businessName: input.organizationName,
-          emailFromName: input.name,
-        },
-      },
-      subscription: {
-        create: {
-          planId: free.id,
-          status: "ACTIVE",
-        },
-      },
-    },
-  });
-
-  return organization;
 }
 
 export async function registerAction(
@@ -77,51 +41,20 @@ export async function registerAction(
 
     await guard(`register:${parsed.data.email}`);
 
-    const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-    if (exists) {
-      return { ok: false, error: "An account with that email already exists." };
-    }
+    const created = await registerAccount(parsed.data);
+    if (!created.ok) return created;
 
-    const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        email: parsed.data.email,
-        name: parsed.data.name,
-        passwordHash,
-      },
-    });
-
-    await provisionWorkspace({
-      userId: user.id,
-      name: parsed.data.name,
-      organizationName: parsed.data.organizationName,
-    });
-
-    const token = generateToken();
-    await prisma.verificationToken.create({
-      data: {
-        identifier: user.email,
-        token: sha256(token),
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
-      },
-    });
-
-    const verifyUrl = absoluteUrl(`/verify-email?token=${token}&email=${encodeURIComponent(user.email)}`);
+    const verifyUrl = absoluteUrl(
+      `/verify-email?token=${created.verifyToken}&email=${encodeURIComponent(created.user.email)}`,
+    );
     const template = mail.templates.verificationEmail(parsed.data.name, verifyUrl);
     await getEmailAdapter().send({
-      to: user.email,
+      to: created.user.email,
       ...template,
     });
     await getEmailAdapter().send({
-      to: user.email,
+      to: created.user.email,
       ...mail.templates.welcomeEmail(parsed.data.name, absoluteUrl("/dashboard")),
-    });
-
-    await writeAuditLog({
-      userId: user.id,
-      action: "user.registered",
-      entityType: "User",
-      entityId: user.id,
     });
 
     await signIn("credentials", {
@@ -223,71 +156,43 @@ export async function resetPasswordAction(
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
-
-  const tokenHash = sha256(parsed.data.token);
-  const record = await prisma.passwordResetToken.findUnique({
-    where: { tokenHash },
-    include: { user: true },
-  });
-
-  if (!record || record.usedAt || record.expires < new Date()) {
-    return { ok: false, error: "This reset link is invalid or expired." };
-  }
-
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { id: record.userId },
-      data: { passwordHash },
-    }),
-    prisma.passwordResetToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-    }),
-  ]);
-
-  await writeAuditLog({
-    userId: record.userId,
-    action: "user.password_reset",
-    entityType: "User",
-    entityId: record.userId,
-  });
-
-  return { ok: true };
+  return resetPasswordWithToken(parsed.data.token, parsed.data.password);
 }
 
 export async function verifyEmailAction(token: string, email: string): Promise<ActionResult> {
-  const parsed = verifyEmailSchema.safeParse({ token, email });
-  if (!parsed.success) {
-    return { ok: false, error: "This verification link is invalid." };
+  return verifyEmailWithToken(token, email);
+}
+
+export async function changePasswordAction(
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { auth } = await import("@/auth");
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "Sign in first." };
   }
 
-  const record = await prisma.verificationToken.findUnique({
-    where: {
-      token: sha256(parsed.data.token),
-    },
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    password: formData.get("password"),
   });
-
-  if (!record || record.identifier !== parsed.data.email || record.expires < new Date()) {
-    return { ok: false, error: "This verification link is invalid or expired." };
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
 
-  await prisma.$transaction([
-    prisma.user.update({
-      where: { email: parsed.data.email },
-      data: { emailVerified: new Date() },
-    }),
-    prisma.verificationToken.delete({
-      where: {
-        identifier_token: {
-          identifier: record.identifier,
-          token: record.token,
-        },
-      },
-    }),
-  ]);
-
-  return { ok: true };
+  try {
+    await guard(`changepw:${session.user.id}`, 5);
+    return changePasswordForUser({
+      userId: session.user.id,
+      currentPassword: parsed.data.currentPassword,
+      password: parsed.data.password,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitError) return { ok: false, error: error.message };
+    console.error(error);
+    return { ok: false, error: "Could not change your password." };
+  }
 }
 
 function safeRedirectPath(value: FormDataEntryValue | null) {

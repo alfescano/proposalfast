@@ -1,0 +1,95 @@
+import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/db";
+import { generateToken, sha256 } from "@/lib/crypto";
+import { writeAuditLog } from "@/lib/audit";
+import { uniqueOrgSlug } from "@/lib/slug";
+import { registerSchema } from "@/lib/validations/auth";
+
+export async function provisionWorkspace(input: {
+  userId: string;
+  name: string;
+  organizationName: string;
+}) {
+  const slug = await uniqueOrgSlug(input.organizationName);
+  const free = await prisma.plan.findUnique({ where: { tier: "FREE" } });
+  if (!free) {
+    throw new Error("Plans are not seeded. Run `npx prisma db seed`.");
+  }
+
+  return prisma.organization.create({
+    data: {
+      name: input.organizationName,
+      slug,
+      members: {
+        create: { userId: input.userId, role: "OWNER" },
+      },
+      settings: {
+        create: {
+          businessName: input.organizationName,
+          emailFromName: input.name,
+        },
+      },
+      subscription: {
+        create: {
+          planId: free.id,
+          status: "ACTIVE",
+        },
+      },
+    },
+  });
+}
+
+export async function registerAccount(input: {
+  name: string;
+  email: string;
+  password: string;
+  organizationName: string;
+}) {
+  const parsed = registerSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the form." };
+  }
+
+  const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  if (exists) {
+    return { ok: false as const, error: "An account with that email already exists." };
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const user = await prisma.user.create({
+    data: {
+      email: parsed.data.email,
+      name: parsed.data.name,
+      passwordHash,
+    },
+  });
+
+  const organization = await provisionWorkspace({
+    userId: user.id,
+    name: parsed.data.name,
+    organizationName: parsed.data.organizationName,
+  });
+
+  const verifyToken = generateToken();
+  await prisma.verificationToken.create({
+    data: {
+      identifier: user.email,
+      token: sha256(verifyToken),
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+    },
+  });
+
+  await writeAuditLog({
+    userId: user.id,
+    action: "user.registered",
+    entityType: "User",
+    entityId: user.id,
+  });
+
+  return {
+    ok: true as const,
+    user,
+    organization,
+    verifyToken,
+  };
+}

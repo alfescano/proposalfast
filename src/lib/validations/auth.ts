@@ -50,5 +50,20 @@ export const verifyEmailSchema = z
   })
   .strict();
 
+const passwordRules = z
+  .string()
+  .min(10, "Password must be at least 10 characters")
+  .max(128)
+  .regex(/[A-Z]/, "Include an uppercase letter")
+  .regex(/[a-z]/, "Include a lowercase letter")
+  .regex(/[0-9]/, "Include a number");
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    password: passwordRules,
+  })
+  .strict();
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;

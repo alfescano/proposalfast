@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loginSchema, registerSchema, resetPasswordSchema } from "./auth";
+import { changePasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "./auth";
 
 describe("registerSchema", () => {
   it("accepts a complete registration", () => {
@@ -28,6 +28,23 @@ describe("loginSchema", () => {
     expect(loginSchema.safeParse({ email: "not-an-email", password: "x" }).success).toBe(false);
     expect(
       loginSchema.safeParse({ email: "alex@proposalfast.com", password: "anything" }).success,
+    ).toBe(true);
+  });
+});
+
+describe("changePasswordSchema", () => {
+  it("requires the current password and a strong replacement", () => {
+    expect(
+      changePasswordSchema.safeParse({ currentPassword: "", password: "StrongPass1" }).success,
+    ).toBe(false);
+    expect(
+      changePasswordSchema.safeParse({ currentPassword: "OldPassword1", password: "weak" }).success,
+    ).toBe(false);
+    expect(
+      changePasswordSchema.safeParse({
+        currentPassword: "OldPassword1",
+        password: "NewPassword1",
+      }).success,
     ).toBe(true);
   });
 });

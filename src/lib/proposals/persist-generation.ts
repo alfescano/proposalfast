@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { PipelineResult } from "@/lib/ai/pipeline";
+import { isProposalLocked } from "@/lib/proposal-lock";
 
 export async function persistGeneratedVersion(input: {
   proposalId: string;
@@ -12,7 +13,7 @@ export async function persistGeneratedVersion(input: {
     include: { versions: { orderBy: { version: "desc" }, take: 1 } },
   });
   if (!proposal) throw new Error("Proposal not found for this organization.");
-  if (proposal.lockedAt) {
+  if (isProposalLocked(proposal)) {
     throw new Error("This proposal is locked.");
   }
 

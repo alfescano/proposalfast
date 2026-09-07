@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { assertPlanCapacity, requireWritableOrg } from "@/lib/org";
 import { writeAuditLog } from "@/lib/audit";
-import { TenantError } from "@/lib/rbac";
+import { deleteClientForOrg, updateClientForOrg } from "@/lib/clients/write";
 import { clientSchema } from "@/lib/validations/client";
 
 export async function createClientAction(formData: FormData) {
@@ -52,11 +52,6 @@ export async function createClientAction(formData: FormData) {
 
 export async function updateClientAction(clientId: string, formData: FormData) {
   const ctx = await requireWritableOrg();
-  const existing = await prisma.client.findFirst({
-    where: { id: clientId, organizationId: ctx.organization.id, deletedAt: null },
-  });
-  if (!existing) throw new TenantError();
-
   const parsed = clientSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -70,19 +65,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the form." };
   }
 
-  await prisma.client.update({
-    where: { id: clientId },
-    data: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      company: parsed.data.company || null,
-      phone: parsed.data.phone || null,
-      website: parsed.data.website || null,
-      address: parsed.data.address || null,
-      notes: parsed.data.notes || null,
-    },
-  });
-
+  await updateClientForOrg(ctx.organization.id, clientId, parsed.data);
   revalidatePath("/clients");
   revalidatePath(`/clients/${clientId}`);
   return { ok: true as const };
@@ -90,24 +73,7 @@ export async function updateClientAction(clientId: string, formData: FormData) {
 
 export async function deleteClientAction(clientId: string) {
   const ctx = await requireWritableOrg();
-  const existing = await prisma.client.findFirst({
-    where: { id: clientId, organizationId: ctx.organization.id, deletedAt: null },
-  });
-  if (!existing) throw new TenantError();
-
-  await prisma.client.update({
-    where: { id: clientId },
-    data: { deletedAt: new Date() },
-  });
-
-  await writeAuditLog({
-    organizationId: ctx.organization.id,
-    userId: ctx.user.id,
-    action: "client.deleted",
-    entityType: "Client",
-    entityId: clientId,
-  });
-
+  await deleteClientForOrg(ctx.organization.id, clientId, ctx.user.id);
   revalidatePath("/clients");
   return { ok: true as const };
 }

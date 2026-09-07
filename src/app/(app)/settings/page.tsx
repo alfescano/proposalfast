@@ -7,6 +7,7 @@ import { FollowUpToggle } from "@/components/app/follow-up-toggle";
 import { TeamPanel } from "@/components/app/team-panel";
 import { NotificationPrefs } from "@/components/app/notification-prefs";
 import { PrivacyPanel } from "@/components/app/privacy-panel";
+import { ChangePasswordForm } from "@/components/app/change-password-form";
 import { canManageBilling, canManageMembers, canManageSettings } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 
@@ -106,6 +107,7 @@ export default async function SettingsPage() {
           expiresAt: invite.expiresAt,
         }))}
       />
+      <ChangePasswordForm />
       {ctx.role === "OWNER" ? <PrivacyPanel /> : null}
     </div>
   );

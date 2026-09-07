@@ -50,3 +50,4 @@ next-env.d.ts
 # agent / local scratch
 /agent-tools
 /tmp-scaffold
+/tmp

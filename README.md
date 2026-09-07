@@ -186,6 +186,8 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 
 See [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) for the success-criteria map and Alfredo’s production keys.
 
+**Do not deploy from this audit.** Read [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) and [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) first.
+
 ## Sentry (optional)
 
 Set `SENTRY_DSN` to a real Sentry project DSN. `src/instrumentation.ts` calls `Sentry.init` only when that variable is present. `src/lib/sentry.ts` (`captureException`) is a no-op otherwise. Do not set a placeholder DSN.

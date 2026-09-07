@@ -13,6 +13,7 @@ import { inngest } from "@/lib/inngest/client";
 import { proposalCreateSchema, proposalGenerateSchema, rewriteSelectionSchema } from "@/lib/validations/proposal";
 import { isProposalLocked, ProposalLockedError } from "@/lib/proposal-lock";
 import { persistGeneratedVersion } from "@/lib/proposals/persist-generation";
+import { extractPlaceholders, saveProposalSectionsForOrg, setProposalStatusForOrg } from "@/lib/proposals/save-sections";
 import { PlanLimitError } from "@/lib/rbac";
 import { RateLimitError, assertRateLimit } from "@/lib/rate-limit";
 
@@ -224,47 +225,9 @@ export async function saveProposalSectionsAction(
   sections: { id: string; title: string; body: string; type: string }[],
 ) {
   const ctx = await requireWritableOrg();
-  const proposal = await prisma.proposal.findFirst({
-    where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
-    include: { versions: { orderBy: { version: "desc" }, take: 1, include: { sections: true } } },
-  });
-  if (!proposal) throw new TenantError();
-  if (isProposalLocked(proposal)) throw new ProposalLockedError();
-
-  const version = proposal.versions[0];
-  if (!version) return { ok: false as const, error: "This proposal has no version to edit." };
-
-  const keepIds = sections.filter((section) => !section.id.startsWith("new_")).map((section) => section.id);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.proposalSection.deleteMany({
-      where: keepIds.length
-        ? { versionId: version.id, id: { notIn: keepIds } }
-        : { versionId: version.id },
-    });
-
-    for (const [index, section] of sections.entries()) {
-      const data = {
-        title: section.title,
-        type: section.type || "paragraph",
-        sortOrder: index,
-        content: { body: section.body, placeholders: extractPlaceholders(section.body) },
-      };
-      if (section.id.startsWith("new_")) {
-        await tx.proposalSection.create({
-          data: { ...data, versionId: version.id },
-        });
-      } else {
-        await tx.proposalSection.update({
-          where: { id: section.id },
-          data,
-        });
-      }
-    }
-  });
-
-  revalidatePath(`/proposals/${proposalId}`);
-  return { ok: true as const };
+  const result = await saveProposalSectionsForOrg(ctx.organization.id, proposalId, sections);
+  if (result.ok) revalidatePath(`/proposals/${proposalId}`);
+  return result;
 }
 
 export async function extendProposalAction(proposalId: string, days: number) {
@@ -439,13 +402,9 @@ export async function queueProposalGenerationAction(formData: FormData) {
 
 export async function setProposalStatusAction(proposalId: string, status: ProposalStatus) {
   const ctx = await requireOrg("MEMBER");
-  const proposal = await prisma.proposal.findFirst({
-    where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
-  });
-  if (!proposal) throw new TenantError();
-  await prisma.proposal.update({ where: { id: proposalId }, data: { status } });
+  const result = await setProposalStatusForOrg(ctx.organization.id, proposalId, status);
   revalidatePath(`/proposals/${proposalId}`);
-  return { ok: true as const };
+  return result;
 }
 
 export async function rewriteSectionAction(formData: FormData) {
@@ -509,6 +468,3 @@ export async function rewriteSectionAction(formData: FormData) {
   }
 }
 
-function extractPlaceholders(body: string) {
-  return [...body.matchAll(/\[PLACEHOLDER:[^\]]+\]/g)].map((match) => match[0]);
-}
