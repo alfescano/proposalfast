@@ -1,8 +1,10 @@
 import Stripe from "stripe";
-import { PlanTier, SubscriptionStatus } from "@prisma/client";
+import { PlanTier, Prisma, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { PLAN_CATALOG } from "@/lib/plans";
 import { writeAuditLog } from "@/lib/audit";
+import { mail, sendMail } from "@/lib/email";
+import { absoluteUrl } from "@/lib/site";
 
 const STATUS_MAP: Record<Stripe.Subscription.Status, SubscriptionStatus> = {
   incomplete: "INCOMPLETE",
@@ -15,23 +17,47 @@ const STATUS_MAP: Record<Stripe.Subscription.Status, SubscriptionStatus> = {
   paused: "PAUSED",
 };
 
+export async function claimStripeEvent(event: { id: string; type: string }) {
+  const existing = await prisma.stripeEvent.findUnique({ where: { id: event.id } });
+  if (existing) return false;
+  try {
+    await prisma.stripeEvent.create({
+      data: { id: event.id, type: event.type },
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function handleStripeEvent(event: Stripe.Event) {
-  switch (event.type) {
-    case "checkout.session.completed":
-      await onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-      break;
-    case "customer.subscription.created":
-    case "customer.subscription.updated":
-      await upsertSubscription(event.data.object as Stripe.Subscription);
-      break;
-    case "customer.subscription.deleted":
-      await onSubscriptionDeleted(event.data.object as Stripe.Subscription);
-      break;
-    case "invoice.paid":
-    case "invoice.payment_failed":
-      break;
-    default:
-      break;
+  const claimed = await claimStripeEvent(event);
+  if (!claimed) {
+    return { duplicate: true as const };
+  }
+
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        await onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
+      case "customer.subscription.created":
+      case "customer.subscription.updated":
+        await upsertSubscription(event.data.object as Stripe.Subscription);
+        break;
+      case "customer.subscription.deleted":
+        await onSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+      default:
+        break;
+    }
+    return { duplicate: false as const, type: event.type };
+  } catch (error) {
+    await prisma.stripeEvent.delete({ where: { id: event.id } }).catch(() => undefined);
+    throw error;
   }
 }
 
@@ -42,7 +68,7 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
     const organizationId = session.metadata?.organizationId;
     if (!proposalId || !organizationId) return;
 
-    await prisma.payment.upsert({
+    const payment = await prisma.payment.upsert({
       where: { stripeCheckoutSessionId: session.id },
       create: {
         organizationId,
@@ -66,14 +92,38 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
       organizationId,
       action: "payment.checkout_completed",
       entityType: "Payment",
-      entityId: proposalId,
-      metadata: { sessionId: session.id },
+      entityId: payment.id,
+      metadata: { sessionId: session.id, proposalId },
     });
+
+    if (payment.status === "SUCCEEDED") {
+      const proposal = await prisma.proposal.findUnique({
+        where: { id: proposalId },
+        include: {
+          organization: { include: { members: { where: { role: "OWNER" }, include: { user: true } } } },
+        },
+      });
+      const owner = proposal?.organization.members[0]?.user;
+      if (owner?.email && proposal) {
+        const amountLabel = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: payment.currency,
+        }).format(payment.amountCents / 100);
+        await sendMail(
+          owner.email,
+          mail.templates.paymentReceivedEmail({
+            recipientName: owner.name ?? "there",
+            title: proposal.title,
+            amountLabel,
+            url: absoluteUrl(`/proposals/${proposal.id}`),
+          }),
+        );
+      }
+    }
     return;
   }
 
   if (session.mode === "subscription" && session.subscription) {
-    // Subscription records are written from customer.subscription.* events.
     const organizationId =
       session.metadata?.organizationId ?? session.client_reference_id ?? undefined;
     if (organizationId && session.customer && typeof session.customer === "string") {
@@ -88,6 +138,11 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
 async function upsertSubscription(sub: Stripe.Subscription) {
   const organizationId = sub.metadata?.organizationId;
   if (!organizationId) return;
+
+  const previous = await prisma.subscription.findUnique({
+    where: { organizationId },
+    include: { plan: true },
+  });
 
   const tier = (sub.metadata?.tier as PlanTier | undefined) ?? inferTier(sub);
   const plan = await prisma.plan.findUnique({ where: { tier } });
@@ -126,6 +181,25 @@ async function upsertSubscription(sub: Stripe.Subscription) {
     entityId: sub.id,
     metadata: { status: sub.status, tier },
   });
+
+  const becamePaid =
+    (sub.status === "active" || sub.status === "trialing") &&
+    previous?.plan.tier === "FREE" &&
+    tier !== "FREE";
+
+  if (becamePaid) {
+    const owner = await orgOwner(organizationId);
+    if (owner?.email) {
+      await sendMail(
+        owner.email,
+        mail.templates.subscriptionStartedEmail({
+          name: owner.name ?? "there",
+          planName: PLAN_CATALOG[tier].name,
+          settingsUrl: absoluteUrl("/settings"),
+        }),
+      );
+    }
+  }
 }
 
 async function onSubscriptionDeleted(sub: Stripe.Subscription) {
@@ -143,6 +217,22 @@ async function onSubscriptionDeleted(sub: Stripe.Subscription) {
       cancelAtPeriodEnd: false,
     },
   });
+
+  const owner = await orgOwner(organizationId);
+  if (owner?.email) {
+    await sendMail(owner.email, mail.templates.subscriptionCanceledEmail({
+      name: owner.name ?? "there",
+      settingsUrl: absoluteUrl("/settings"),
+    }));
+  }
+}
+
+async function orgOwner(organizationId: string) {
+  const member = await prisma.organizationMember.findFirst({
+    where: { organizationId, role: "OWNER" },
+    include: { user: true },
+  });
+  return member?.user ?? null;
 }
 
 function inferTier(sub: Stripe.Subscription): PlanTier {

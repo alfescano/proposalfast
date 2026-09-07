@@ -1,12 +1,7 @@
 import type { EmailAdapter } from "./adapter";
 import { ConsoleEmailAdapter } from "./console";
 import { ResendEmailAdapter } from "./resend";
-import {
-  passwordResetEmail,
-  verificationEmail,
-  contactNotificationEmail,
-  proposalSentEmail,
-} from "./templates";
+import * as templates from "./templates";
 
 export function getEmailAdapter(): EmailAdapter {
   if (process.env.RESEND_API_KEY) {
@@ -20,10 +15,13 @@ export function getEmailAdapter(): EmailAdapter {
 
 export const mail = {
   adapter: getEmailAdapter,
-  templates: {
-    verificationEmail,
-    passwordResetEmail,
-    contactNotificationEmail,
-    proposalSentEmail,
-  },
+  templates,
 };
+
+export async function sendMail(
+  to: string,
+  template: { subject: string; html: string; text: string },
+  replyTo?: string,
+) {
+  return getEmailAdapter().send({ to, replyTo, ...template });
+}

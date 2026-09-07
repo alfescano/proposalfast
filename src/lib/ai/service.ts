@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ZodType } from "zod";
 import { prisma } from "@/lib/db";
 import { isWithinLimit, PLAN_CATALOG } from "@/lib/plans";
 import { PlanLimitError } from "@/lib/rbac";
@@ -72,6 +73,57 @@ export class AIService {
       model,
       usage: response.usage,
     };
+  }
+
+  /**
+   * Parse model JSON through Zod. On a schema miss, retry once with the
+   * validator error — never invent a stand-in object.
+   */
+  async completeJson<T>(schema: ZodType<T>, args: CompleteArgs): Promise<T> {
+    const first = await this.complete({ ...args, json: true });
+    const parsed = parseJsonAgainst(schema, first.text);
+    if (parsed.ok) return parsed.data;
+
+    const retry = await this.complete({
+      ...args,
+      json: true,
+      purpose: `${args.purpose}:retry`,
+      messages: [
+        ...args.messages,
+        { role: "assistant", content: first.text },
+        {
+          role: "user",
+          content: `Your JSON failed validation: ${parsed.error}. Return only valid JSON that matches the requested schema. Do not invent facts.`,
+        },
+      ],
+    });
+
+    const second = parseJsonAgainst(schema, retry.text);
+    if (!second.ok) {
+      throw new Error(`Model JSON failed validation after retry: ${second.error}`);
+    }
+    return second.data;
+  }
+}
+
+export function parseJsonAgainst<T>(
+  schema: ZodType<T>,
+  text: string,
+): { ok: true; data: T } | { ok: false; error: string } {
+  try {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1) {
+      return { ok: false, error: "Response did not contain a JSON object." };
+    }
+    const raw = JSON.parse(text.slice(start, end + 1)) as unknown;
+    const parsed = schema.safeParse(raw);
+    if (!parsed.success) {
+      return { ok: false, error: parsed.error.issues.map((issue) => issue.message).join("; ") };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Invalid JSON" };
   }
 }
 

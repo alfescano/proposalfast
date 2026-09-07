@@ -58,6 +58,7 @@ openssl rand -base64 32
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client Stripe.js when Checkout is wired in the UI |
 | `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY` | Pro prices |
 | `STRIPE_PRICE_BUSINESS_MONTHLY` / `_YEARLY` | Business prices |
+| `STRIPE_TRIAL_DAYS` | Optional 1–30 day trial on new Checkout subscriptions |
 | `S3_BUCKET` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | Logos, PDFs, signatures |
 | `S3_REGION` `S3_ENDPOINT` `S3_PUBLIC_URL` | `S3_ENDPOINT` for R2 |
 
@@ -107,7 +108,7 @@ The app **does not** flip a plan because a button was clicked. Stripe webhooks w
 
 ## OpenAI
 
-`AIService` is the only caller. The pipeline is extract → outline → generate → QC → score. It will not invent prices, guarantees, case studies, or stats. Missing facts become `[PLACEHOLDER]`.
+`AIService` is the only caller. Models come from `OPENAI_MODEL` / `OPENAI_MODEL_FAST`. The pipeline is extract → outline → generate → QC → score (0–100 with completeness, fidelity, clarity, commercial readiness). Each stage returns Zod-validated JSON and retries once on a schema miss. Invented prices/stats are replaced with `[PLACEHOLDER: …]`. Rewrite controls (rewrite / shorten / expand / tone / persuasive / humanize) run on selected text. Usage is written to `AIUsage` and capped by the org’s plan.
 
 ## Resend
 

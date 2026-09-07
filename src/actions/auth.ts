@@ -113,6 +113,10 @@ export async function registerAction(
       to: user.email,
       ...template,
     });
+    await getEmailAdapter().send({
+      to: user.email,
+      ...mail.templates.welcomeEmail(parsed.data.name, absoluteUrl("/dashboard")),
+    });
 
     await writeAuditLog({
       userId: user.id,

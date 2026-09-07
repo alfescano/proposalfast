@@ -1,9 +1,11 @@
 import { inngest } from "./client";
 import { runProposalPipeline } from "@/lib/ai/pipeline";
-import { getEmailAdapter } from "@/lib/email";
+import { persistGeneratedVersion } from "@/lib/proposals/persist-generation";
+import { getEmailAdapter, mail } from "@/lib/email";
 import { prisma } from "@/lib/db";
 import { renderProposalPdf } from "@/lib/pdf/render";
 import { getStorage } from "@/lib/storage/s3";
+import { absoluteUrl } from "@/lib/site";
 
 export const generateProposalJob = inngest.createFunction(
   { id: "proposal-generate", triggers: { event: "proposal/generate" } },
@@ -20,39 +22,14 @@ export const generateProposalJob = inngest.createFunction(
       runProposalPipeline({ brief, facts, organizationId, userId }),
     );
 
-    await step.run("persist", async () => {
-      const proposal = await prisma.proposal.findFirst({
-        where: { id: proposalId, organizationId, deletedAt: null },
-        include: { versions: { orderBy: { version: "desc" }, take: 1 } },
-      });
-      if (!proposal) throw new Error("Proposal not found for this organization.");
-
-      const nextVersion = (proposal.versions[0]?.version ?? 0) + 1;
-      await prisma.proposalVersion.create({
-        data: {
-          proposalId,
-          version: nextVersion,
-          content: result as object,
-          createdById: userId,
-          sections: {
-            create: result.sections.map((section, index) => ({
-              type: section.type,
-              title: section.title,
-              sortOrder: index,
-              content: {
-                body: section.body,
-                placeholders: section.placeholders,
-              },
-            })),
-          },
-        },
-      });
-
-      await prisma.proposal.update({
-        where: { id: proposalId },
-        data: { status: "REVIEW" },
-      });
-    });
+    await step.run("persist", async () =>
+      persistGeneratedVersion({
+        proposalId,
+        organizationId,
+        userId,
+        result,
+      }),
+    );
 
     return { ok: true };
   },
@@ -101,6 +78,17 @@ export const followUpJob = inngest.createFunction(
     });
     if (!followUp || followUp.status !== "SCHEDULED") return { skipped: true };
 
+    const settings = await prisma.settings.findUnique({
+      where: { organizationId: followUp.organizationId },
+    });
+    if (!followUp.proposal.followUpOptIn || !settings?.followUpOptIn) {
+      await prisma.followUp.update({
+        where: { id: followUpId },
+        data: { status: "CANCELED" },
+      });
+      return { skipped: true, reason: "opt-in-required" };
+    }
+
     const adapter = getEmailAdapter();
     if (!followUp.proposal.client?.email) {
       await prisma.followUp.update({
@@ -110,12 +98,13 @@ export const followUpJob = inngest.createFunction(
       return { skipped: true };
     }
 
-    await adapter.send({
-      to: followUp.proposal.client.email,
-      subject: `Following up: ${followUp.proposal.title}`,
-      text: `A reminder that ${followUp.proposal.organization.name} sent you a proposal. Reply to this thread if you have questions.`,
-      html: `<p>A reminder that ${followUp.proposal.organization.name} sent you a proposal.</p>`,
+    const template = mail.templates.followUpEmail({
+      clientName: followUp.proposal.client.name,
+      senderName: followUp.proposal.organization.name,
+      title: followUp.proposal.title,
+      portalUrl: absoluteUrl(`/p/${followUp.proposal.publicId}`),
     });
+    await adapter.send({ to: followUp.proposal.client.email, ...template });
 
     await prisma.followUp.update({
       where: { id: followUpId },

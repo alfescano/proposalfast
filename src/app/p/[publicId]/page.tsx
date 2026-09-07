@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { hashIp } from "@/lib/crypto";
+import { chargeAmountCents, paymentLabel } from "@/lib/payments";
+import { recordProposalView } from "@/lib/proposals/record-view";
+import { SignPayPanel } from "@/components/public/sign-pay";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function PublicProposalPage({
     include: {
       organization: { include: { settings: true } },
       client: true,
+      signatures: { where: { status: "SIGNED" }, take: 1 },
       versions: {
         orderBy: { version: "desc" },
         take: 1,
@@ -45,26 +48,27 @@ export default async function PublicProposalPage({
 
   const headerList = await headers();
   const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim();
-  await prisma.proposalView.create({
-    data: {
-      proposalId: proposal.id,
-      ipHash: hashIp(ip),
-      userAgent: headerList.get("user-agent"),
-      referrer: headerList.get("referer"),
-    },
+  await recordProposalView({
+    proposalId: proposal.id,
+    organizationId: proposal.organizationId,
+    title: proposal.title,
+    status: proposal.status,
+    viewedAt: proposal.viewedAt,
+    ip,
+    userAgent: headerList.get("user-agent"),
+    referrer: headerList.get("referer"),
   });
-  await prisma.proposalEvent.create({
-    data: { proposalId: proposal.id, type: "viewed" },
-  });
-  if (proposal.status === "SENT") {
-    await prisma.proposal.update({
-      where: { id: proposal.id },
-      data: { status: "VIEWED", viewedAt: proposal.viewedAt ?? new Date() },
-    });
-  }
 
   const seller = proposal.organization.settings?.businessName || proposal.organization.name;
   const sections = proposal.versions[0]?.sections ?? [];
+  const charge = chargeAmountCents(proposal);
+  const amountLabel =
+    charge != null
+      ? new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: proposal.currency,
+        }).format(charge / 100)
+      : null;
 
   return (
     <main className="min-h-screen bg-[#f6f1e8] text-[#152033]">
@@ -75,6 +79,9 @@ export default async function PublicProposalPage({
           Prepared by {seller}
           {proposal.client ? ` for ${proposal.client.company || proposal.client.name}` : ""}
         </p>
+        {proposal.organization.settings?.tagline ? (
+          <p className="mt-2 text-sm italic">{proposal.organization.settings.tagline}</p>
+        ) : null}
         <div className="mt-10 space-y-8">
           {sections.map((section) => {
             const body =
@@ -89,12 +96,21 @@ export default async function PublicProposalPage({
             );
           })}
         </div>
-        <div className="mt-10 rounded-2xl border border-dashed border-[#c9a227] bg-[#fffdf8] p-6 text-sm">
-          <p className="font-medium">Sign and pay</p>
-          <p className="mt-2 text-muted-foreground">
-            E-sign and Stripe Checkout attach here once STRIPE_SECRET_KEY is configured and a fee is
-            on the proposal. This portal is already tracking views in the database.
+        {charge != null ? (
+          <p className="mt-8 text-sm">
+            {paymentLabel(proposal.paymentMode, proposal.depositPercent)}:{" "}
+            <strong>{amountLabel}</strong>
           </p>
+        ) : null}
+        <div className="mt-10">
+          <SignPayPanel
+            publicId={proposal.publicId}
+            alreadySigned={Boolean(proposal.lockedAt || proposal.signatures[0])}
+            paymentEnabled={proposal.paymentEnabled && charge != null}
+            amountLabel={amountLabel}
+            signerDefaultName={proposal.client?.name ?? undefined}
+            signerDefaultEmail={proposal.client?.email ?? undefined}
+          />
         </div>
       </div>
     </main>

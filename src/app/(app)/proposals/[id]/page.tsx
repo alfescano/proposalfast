@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/org";
 import { absoluteUrl } from "@/lib/site";
 import { ProposalEditor } from "@/components/app/proposal-editor";
+import { isProposalLocked } from "@/lib/proposal-lock";
+import type { ScoreDimensions } from "@/lib/ai/schemas";
 
 export const metadata: Metadata = { title: "Edit proposal" };
 
@@ -33,6 +35,10 @@ export default async function ProposalDetailPage({
   });
 
   const version = proposal.versions[0];
+  const score =
+    version?.content && typeof version.content === "object" && "score" in version.content
+      ? (version.content as { score?: ScoreDimensions }).score
+      : null;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -46,6 +52,12 @@ export default async function ProposalDetailPage({
           publicId: proposal.publicId,
           portalUrl: absoluteUrl(`/p/${proposal.publicId}`),
           validUntil: proposal.validUntil?.toISOString().slice(0, 10) ?? "",
+          locked: isProposalLocked(proposal),
+          paymentEnabled: proposal.paymentEnabled,
+          paymentMode: proposal.paymentMode,
+          amount: proposal.amountCents != null ? String(proposal.amountCents / 100) : "",
+          depositPercent: proposal.depositPercent != null ? String(proposal.depositPercent) : "",
+          followUpOptIn: proposal.followUpOptIn,
         }}
         clients={clients.map((client) => ({
           id: client.id,
@@ -59,6 +71,7 @@ export default async function ProposalDetailPage({
               ? String((section.content as { body?: string }).body ?? "")
               : "",
         }))}
+        score={score ?? null}
       />
     </div>
   );

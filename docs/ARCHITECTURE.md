@@ -1,6 +1,6 @@
 # ProposalFast architecture
 
-ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document is the Phase 1 map of the repo.
+ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document covers Phase 1–3: foundation, CRM/proposals, then AI, e-sign, Stripe, email, and PDF.
 
 ## Stack choices
 
@@ -81,21 +81,25 @@ Paid status is written only from verified Stripe webhooks (`customer.subscriptio
 
 ## AI pipeline (no hallucination)
 
+`AIService.complete` / `completeJson` is the only OpenAI entry point. Models: `OPENAI_MODEL` and `OPENAI_MODEL_FAST`.
+
 `runProposalPipeline` in `src/lib/ai/pipeline.ts`:
 
-1. **Extract** — facts explicitly present in the brief.
-2. **Outline** — section list from those facts.
-3. **Generate** — copy. Missing commercial facts become `[PLACEHOLDER: …]`.
-4. **QC** — flag invented prices, stats, guarantees, or case studies.
-5. **Score** — completeness 0–100 from remaining placeholders.
+1. **Extract** — Zod `extractResultSchema`. Facts explicitly present in the brief.
+2. **Outline** — Zod `outlineResultSchema`.
+3. **Generate** — Zod `generateResultSchema`. Missing commercial facts become `[PLACEHOLDER: …]`.
+4. **QC** — Zod `qcResultSchema`. Flag invented prices, stats, guarantees, or case studies.
+5. **Score** — Zod `scoreDimensionsSchema` (completeness, fidelity, clarity, commercialReadiness, overall 0–100), blended with a local placeholder completeness score.
 
-System prompt forbids inventing client names, fees, timelines, legal terms, or proof points. `AIService` records `AIUsage` per call.
+Each `completeJson` call retries **once** if Zod rejects the payload. After generate, `sanitizeInventedClaims` strips dollar amounts, guarantee percents, and case-study language that do not appear in the fact corpus.
+
+Rewrite modes (`src/lib/ai/rewrite.ts`) apply the same rules to a selected span. `AIUsage` logs every call; `assertAiQuota` enforces FREE/PRO/BUSINESS monthly caps. Create-proposal can run the pipeline when “Draft with AI” is checked.
 
 ## Email
 
 `getEmailAdapter()` returns `ResendEmailAdapter` when `RESEND_API_KEY` is set. Otherwise, in development only, `ConsoleEmailAdapter` logs the message. Production throws if the Resend key is missing.
 
-Used for: email verification, password reset, contact form, proposal send, follow-ups.
+Used for: welcome, verification, password reset, contact, proposal sent / opened / accepted / signed, payment received, subscription started / canceled, follow-ups (opt-in only).
 
 ## Jobs
 
@@ -120,7 +124,24 @@ If `INNGEST_EVENT_KEY` is unset, proposal generation still runs inline when `OPE
 
 ## Public client portal
 
-`/p/[publicId]` is unauthenticated. It renders the latest version’s sections and records a view. E-sign and Checkout attach when Stripe keys and a fee exist (Phase 3+ of the product; models and Checkout helpers are already in the repo).
+`/p/[publicId]` is unauthenticated. It records a view (first open emails the owner), renders the latest sections, and offers:
+
+- **E-sign** — name, email, typed or drawn signature, consent checkbox. Persists `Signature` (version id, IP hash, user agent, timestamp) and locks every `ProposalVersion`. Further edits throw `ProposalLockedError`.
+- **Pay** — Stripe Checkout when `paymentEnabled` and an amount are set. Modes: FULL, DEPOSIT (% of `amountCents`), FIXED.
+
+## Stripe billing
+
+Plans live in `src/lib/plans.ts` (the UI only reads that catalog). Owner starts Checkout; `STRIPE_TRIAL_DAYS` (1–30) is attached when set. Customer Portal requires a stored `stripeCustomerId`.
+
+`handleStripeEvent` claims `StripeEvent.id` first (unique). Duplicates return `{ duplicate: true }` and do not write again. Failed handlers delete the claim so Stripe can retry. Webhook signatures are verified in `/api/webhooks/stripe`.
+
+## Follow-ups
+
+Inngest `proposal/follow-up` sends only when **both** the workspace (`Settings.followUpOptIn`) and the proposal (`Proposal.followUpOptIn`) are on. Off by default.
+
+## PDF
+
+`GET /proposals/[id]/pdf` renders `@react-pdf/renderer` with brand color, pricing box, and a signature block (filled after sign).
 
 ## Deployment
 

@@ -10,7 +10,10 @@ import { TenantError } from "@/lib/rbac";
 import { getEmailAdapter, mail } from "@/lib/email";
 import { absoluteUrl } from "@/lib/site";
 import { inngest } from "@/lib/inngest/client";
-import { proposalCreateSchema, proposalGenerateSchema } from "@/lib/validations/proposal";
+import { proposalCreateSchema, proposalGenerateSchema, rewriteSelectionSchema } from "@/lib/validations/proposal";
+import { isProposalLocked, ProposalLockedError } from "@/lib/proposal-lock";
+import { persistGeneratedVersion } from "@/lib/proposals/persist-generation";
+import { PlanLimitError } from "@/lib/rbac";
 
 type TemplateContent = {
   sections: { type: string; title: string; body?: string }[];
@@ -24,6 +27,14 @@ export async function createProposalAction(formData: FormData) {
     templateId: formData.get("templateId") || undefined,
     currency: formData.get("currency") || "USD",
     validUntil: formData.get("validUntil") || undefined,
+    brief: formData.get("brief") || undefined,
+    facts: formData.get("facts") || undefined,
+    useAi: formData.get("useAi") || undefined,
+    paymentEnabled: formData.get("paymentEnabled") || undefined,
+    paymentMode: formData.get("paymentMode") || undefined,
+    amount: formData.get("amount") || undefined,
+    depositPercent: formData.get("depositPercent") || undefined,
+    followUpOptIn: formData.get("followUpOptIn") || undefined,
   });
   if (!parsed.success) {
     return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Check the form." };
@@ -76,6 +87,11 @@ export async function createProposalAction(formData: FormData) {
       title: parsed.data.title,
       currency: parsed.data.currency,
       validUntil: parsed.data.validUntil ? new Date(parsed.data.validUntil) : null,
+      paymentEnabled: Boolean(parsed.data.paymentEnabled),
+      paymentMode: parsed.data.paymentMode || "FULL",
+      amountCents: parsed.data.amount ? Math.round(Number(parsed.data.amount) * 100) : null,
+      depositPercent: parsed.data.depositPercent ? Number(parsed.data.depositPercent) : null,
+      followUpOptIn: Boolean(parsed.data.followUpOptIn),
       createdById: ctx.user.id,
       versions: {
         create: {
@@ -99,6 +115,37 @@ export async function createProposalAction(formData: FormData) {
     entityId: proposal.id,
   });
 
+  const brief = parsed.data.brief?.trim();
+  if (parsed.data.useAi && brief && brief.length >= 20) {
+    const facts = (parsed.data.facts ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+    try {
+      if (process.env.OPENAI_API_KEY) {
+        const { runProposalPipeline } = await import("@/lib/ai/pipeline");
+        const result = await runProposalPipeline({
+          brief,
+          facts,
+          organizationId: ctx.organization.id,
+          userId: ctx.user.id,
+          businessName: ctx.organization.name,
+        });
+        await persistGeneratedVersion({
+          proposalId: proposal.id,
+          organizationId: ctx.organization.id,
+          userId: ctx.user.id,
+          result,
+        });
+      }
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        return { ok: true as const, id: proposal.id, warning: error.message };
+      }
+      console.error(error);
+    }
+  }
+
   revalidatePath("/proposals");
   revalidatePath("/dashboard");
   return { ok: true as const, id: proposal.id };
@@ -110,11 +157,17 @@ export async function updateProposalMetaAction(proposalId: string, formData: For
     where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
   });
   if (!proposal) throw new TenantError();
+  if (isProposalLocked(proposal)) throw new ProposalLockedError();
 
   const title = String(formData.get("title") ?? proposal.title).trim();
   const clientId = String(formData.get("clientId") ?? "") || null;
   const currency = String(formData.get("currency") ?? proposal.currency);
   const validUntil = String(formData.get("validUntil") ?? "");
+  const paymentEnabled = formData.get("paymentEnabled") === "on";
+  const paymentMode = (formData.get("paymentMode") as "FULL" | "DEPOSIT" | "FIXED") || proposal.paymentMode;
+  const amount = String(formData.get("amount") ?? "");
+  const depositPercent = String(formData.get("depositPercent") ?? "");
+  const followUpOptIn = formData.get("followUpOptIn") === "on";
 
   if (title.length < 3) {
     return { ok: false as const, error: "Title is too short." };
@@ -134,6 +187,11 @@ export async function updateProposalMetaAction(proposalId: string, formData: For
       clientId,
       currency,
       validUntil: validUntil ? new Date(validUntil) : null,
+      paymentEnabled,
+      paymentMode,
+      amountCents: amount ? Math.round(Number(amount) * 100) : proposal.amountCents,
+      depositPercent: depositPercent ? Number(depositPercent) : proposal.depositPercent,
+      followUpOptIn,
     },
   });
 
@@ -152,6 +210,7 @@ export async function saveProposalSectionsAction(
     include: { versions: { orderBy: { version: "desc" }, take: 1 } },
   });
   if (!proposal) throw new TenantError();
+  if (isProposalLocked(proposal)) throw new ProposalLockedError();
 
   await prisma.$transaction(
     sections.map((section) =>
@@ -175,6 +234,7 @@ export async function archiveProposalAction(proposalId: string) {
     where: { id: proposalId, organizationId: ctx.organization.id, deletedAt: null },
   });
   if (!proposal) throw new TenantError();
+  if (isProposalLocked(proposal)) throw new ProposalLockedError();
 
   await prisma.proposal.update({
     where: { id: proposalId },
@@ -212,6 +272,25 @@ export async function sendProposalAction(proposalId: string) {
     data: { proposalId, type: "sent", metadata: { to: proposal.client.email } },
   });
 
+  const settings = await prisma.settings.findUnique({
+    where: { organizationId: ctx.organization.id },
+  });
+  if (proposal.followUpOptIn && settings?.followUpOptIn) {
+    const scheduledAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 3);
+    const followUp = await prisma.followUp.create({
+      data: {
+        organizationId: ctx.organization.id,
+        proposalId,
+        scheduledAt,
+        type: "reminder",
+        status: "SCHEDULED",
+      },
+    });
+    if (process.env.INNGEST_EVENT_KEY) {
+      await inngest.send({ name: "proposal/follow-up", data: { followUpId: followUp.id } });
+    }
+  }
+
   revalidatePath(`/proposals/${proposalId}`);
   return { ok: true as const, portalUrl };
 }
@@ -235,6 +314,7 @@ export async function queueProposalGenerationAction(formData: FormData) {
     include: { client: true },
   });
   if (!proposal) throw new TenantError();
+  if (isProposalLocked(proposal)) throw new ProposalLockedError();
 
   await prisma.proposal.update({
     where: { id: proposal.id },
@@ -264,29 +344,11 @@ export async function queueProposalGenerationAction(formData: FormData) {
       businessName: ctx.organization.name,
       clientName: proposal.client?.name ?? undefined,
     });
-    const latest = await prisma.proposalVersion.findFirst({
-      where: { proposalId: proposal.id },
-      orderBy: { version: "desc" },
-    });
-    await prisma.proposalVersion.create({
-      data: {
-        proposalId: proposal.id,
-        version: (latest?.version ?? 0) + 1,
-        content: result as object,
-        createdById: ctx.user.id,
-        sections: {
-          create: result.sections.map((section, index) => ({
-            type: section.type,
-            title: section.title,
-            sortOrder: index,
-            content: { body: section.body, placeholders: section.placeholders },
-          })),
-        },
-      },
-    });
-    await prisma.proposal.update({
-      where: { id: proposal.id },
-      data: { status: "REVIEW" },
+    await persistGeneratedVersion({
+      proposalId: proposal.id,
+      organizationId: ctx.organization.id,
+      userId: ctx.user.id,
+      result,
     });
   } else {
     await prisma.proposal.update({
@@ -312,6 +374,61 @@ export async function setProposalStatusAction(proposalId: string, status: Propos
   await prisma.proposal.update({ where: { id: proposalId }, data: { status } });
   revalidatePath(`/proposals/${proposalId}`);
   return { ok: true as const };
+}
+
+export async function rewriteSectionAction(formData: FormData) {
+  const ctx = await requireWritableOrg();
+  const parsed = rewriteSelectionSchema.safeParse({
+    proposalId: formData.get("proposalId"),
+    sectionId: formData.get("sectionId"),
+    selectedText: formData.get("selectedText"),
+    mode: formData.get("mode"),
+  });
+  if (!parsed.success) {
+    return { ok: false as const, error: parsed.error.issues[0]?.message ?? "Select text to rewrite." };
+  }
+
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: parsed.data.proposalId, organizationId: ctx.organization.id, deletedAt: null },
+  });
+  if (!proposal) throw new TenantError();
+  if (isProposalLocked(proposal)) throw new ProposalLockedError();
+
+  const section = await prisma.proposalSection.findFirst({
+    where: { id: parsed.data.sectionId, version: { proposalId: proposal.id } },
+  });
+  if (!section) throw new TenantError();
+
+  try {
+    const { rewriteSelection } = await import("@/lib/ai/rewrite");
+    const rewritten = await rewriteSelection({
+      text: parsed.data.selectedText,
+      mode: parsed.data.mode,
+      organizationId: ctx.organization.id,
+      userId: ctx.user.id,
+    });
+    const currentBody =
+      section.content && typeof section.content === "object" && "body" in section.content
+        ? String((section.content as { body?: string }).body ?? "")
+        : "";
+    const nextBody = currentBody.includes(parsed.data.selectedText)
+      ? currentBody.replace(parsed.data.selectedText, rewritten.text)
+      : rewritten.text;
+
+    await prisma.proposalSection.update({
+      where: { id: section.id },
+      data: {
+        content: { body: nextBody, placeholders: extractPlaceholders(nextBody) },
+      },
+    });
+    revalidatePath(`/proposals/${proposal.id}`);
+    return { ok: true as const, text: rewritten.text, body: nextBody };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : "Rewrite failed.",
+    };
+  }
 }
 
 function extractPlaceholders(body: string) {

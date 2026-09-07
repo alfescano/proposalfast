@@ -66,6 +66,17 @@ enum FollowUpStatus {
   FAILED
 }
 
+enum PaymentMode {
+  FULL
+  DEPOSIT
+  FIXED
+}
+
+enum SignatureType {
+  DRAWN
+  TYPED
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -261,6 +272,12 @@ model Proposal {
   viewedAt       DateTime?
   signedAt       DateTime?
   acceptedAt     DateTime?
+  lockedAt       DateTime?
+  paymentEnabled Boolean        @default(false)
+  paymentMode    PaymentMode    @default(FULL)
+  amountCents    Int?
+  depositPercent Int?
+  followUpOptIn  Boolean        @default(false)
   createdById    String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -289,11 +306,13 @@ model ProposalVersion {
   proposalId  String
   version     Int
   content     Json
+  locked      Boolean  @default(false)
   createdById String
   createdAt   DateTime @default(now())
 
-  proposal Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  sections ProposalSection[]
+  proposal   Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  sections   ProposalSection[]
+  signatures Signature[]
 
   @@unique([proposalId, version])
   @@index([proposalId])
@@ -365,20 +384,24 @@ model ProposalEvent {
 model Signature {
   id            String          @id @default(cuid())
   proposalId    String
+  versionId     String?
   signerName    String
   signerEmail   String
   signedAt      DateTime?
   ipHash        String?
   userAgent     String?
-  signatureData String?
+  signatureData String?         @db.Text
+  signatureType SignatureType   @default(TYPED)
   consentText   String?
   status        SignatureStatus @default(PENDING)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
 
-  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposal Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  version  ProposalVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
 
   @@index([proposalId, status])
+  @@index([versionId])
 }
 
 model Payment {
@@ -508,9 +531,18 @@ model Settings {
   emailFromName       String?
   emailReplyTo        String?
   onboardingCompleted Boolean  @default(false)
+  followUpOptIn       Boolean  @default(false)
   extras              Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model StripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([type, processedAt])
 }

@@ -1,4 +1,13 @@
 import { getAIService } from "./service";
+import {
+  extractResultSchema,
+  generateResultSchema,
+  outlineResultSchema,
+  qcResultSchema,
+  scoreDimensionsSchema,
+  type ScoreDimensions,
+} from "./schemas";
+import { localCompleteness, mergeScore, sanitizeInventedClaims } from "./placeholders";
 
 export type PipelineInput = {
   brief: string;
@@ -17,13 +26,14 @@ export type ExtractedFact = {
 
 export type PipelineResult = {
   facts: ExtractedFact[];
+  missing: string[];
   outline: { title: string; type: string; intent: string }[];
   sections: { title: string; type: string; body: string; placeholders: string[] }[];
   qc: { invented: string[]; missing: string[]; ok: boolean };
-  score: { completeness: number; notes: string[] };
+  score: ScoreDimensions;
 };
 
-const NO_HALLUCINATION = `You work for ProposalFast. Hard rules:
+export const NO_HALLUCINATION = `You work for ProposalFast. Hard rules:
 - Never invent client names, prices, timelines, guarantees, case studies, metrics, team bios, or legal terms.
 - If a fact is not in the provided FACTS or BRIEF, write the token [PLACEHOLDER: description] and list it as missing.
 - Do not reuse generic industry statistics.
@@ -41,29 +51,27 @@ export async function runProposalPipeline(input: PipelineInput): Promise<Pipelin
     .filter(Boolean)
     .join("\n");
 
-  const extracted = await ai.complete({
+  const extracted = await ai.completeJson(extractResultSchema, {
     organizationId: input.organizationId,
     userId: input.userId,
     purpose: "extract",
     fast: true,
-    json: true,
     messages: [
       { role: "system", content: NO_HALLUCINATION },
       {
         role: "user",
-        content: `Extract only facts that are explicitly present. JSON shape: {"facts":[{"key":"","value":"","source":"user"|"missing"}]}. BRIEF+FACTS:\n${factBlock}`,
+        content: `Extract only facts that are explicitly present. JSON: {"facts":[{"key":"","value":"","source":"user"|"missing"}],"missing":[""]}. BRIEF+FACTS:\n${factBlock}`,
       },
     ],
   });
 
-  const facts = parseJson<{ facts: ExtractedFact[] }>(extracted.text).facts ?? [];
+  const facts = extracted.facts;
 
-  const outlineRaw = await ai.complete({
+  const outline = await ai.completeJson(outlineResultSchema, {
     organizationId: input.organizationId,
     userId: input.userId,
     purpose: "outline",
     fast: true,
-    json: true,
     messages: [
       { role: "system", content: NO_HALLUCINATION },
       {
@@ -72,64 +80,69 @@ export async function runProposalPipeline(input: PipelineInput): Promise<Pipelin
       },
     ],
   });
-  const outline = parseJson<{ outline: PipelineResult["outline"] }>(outlineRaw.text).outline ?? [];
 
-  const generated = await ai.complete({
+  const generated = await ai.completeJson(generateResultSchema, {
     organizationId: input.organizationId,
     userId: input.userId,
     purpose: "generate",
-    json: true,
     messages: [
       { role: "system", content: NO_HALLUCINATION },
       {
         role: "user",
-        content: `Write each outlined section. Missing facts become [PLACEHOLDER: ...]. JSON: {"sections":[{"title":"","type":"","body":"","placeholders":[""]}]}\nOUTLINE:${JSON.stringify(outline)}\nFACTS:${JSON.stringify(facts)}`,
+        content: `Write each outlined section. Missing facts become [PLACEHOLDER: ...]. JSON: {"sections":[{"title":"","type":"","body":"","placeholders":[""]}]}\nOUTLINE:${JSON.stringify(outline.outline)}\nFACTS:${JSON.stringify(facts)}`,
       },
     ],
   });
-  const sections =
-    parseJson<{ sections: PipelineResult["sections"] }>(generated.text).sections ?? [];
 
-  const qcRaw = await ai.complete({
+  const sanitized = generated.sections.map((section) => {
+    const cleaned = sanitizeInventedClaims(section.body, facts, input.facts ?? []);
+    return {
+      ...section,
+      body: cleaned.body,
+      placeholders: cleaned.placeholders,
+    };
+  });
+
+  const qc = await ai.completeJson(qcResultSchema, {
     organizationId: input.organizationId,
     userId: input.userId,
     purpose: "qc",
     fast: true,
-    json: true,
     messages: [
       { role: "system", content: NO_HALLUCINATION },
       {
         role: "user",
-        content: `Flag any invented prices, stats, case studies, or guarantees that are not in FACTS. JSON: {"invented":[""],"missing":[""],"ok":true}\nFACTS:${JSON.stringify(facts)}\nSECTIONS:${JSON.stringify(sections)}`,
+        content: `Flag any invented prices, stats, case studies, or guarantees that are not in FACTS. JSON: {"invented":[""],"missing":[""],"ok":true}\nFACTS:${JSON.stringify(facts)}\nSECTIONS:${JSON.stringify(sanitized)}`,
       },
     ],
   });
-  const qc = parseJson<PipelineResult["qc"]>(qcRaw.text);
 
-  const scoreRaw = await ai.complete({
+  const local = localCompleteness(sanitized.map((section) => section.body));
+  const scored = await ai.completeJson(scoreDimensionsSchema, {
     organizationId: input.organizationId,
     userId: input.userId,
     purpose: "score",
     fast: true,
-    json: true,
     messages: [
       { role: "system", content: NO_HALLUCINATION },
       {
         role: "user",
-        content: `Score completeness 0-100 based on how many required commercial facts are still placeholders. JSON: {"completeness":0,"notes":[""]}\nQC:${JSON.stringify(qc)}\nSECTIONS:${JSON.stringify(sections)}`,
+        content: `Score 0-100 on completeness, fidelity (no invented facts), clarity, and commercialReadiness. overall is the mean. JSON: {"completeness":0,"fidelity":0,"clarity":0,"commercialReadiness":0,"overall":0,"notes":[""]}\nQC:${JSON.stringify(qc)}\nSECTIONS:${JSON.stringify(sanitized)}`,
       },
     ],
   });
-  const score = parseJson<PipelineResult["score"]>(scoreRaw.text);
 
-  return { facts, outline, sections, qc, score };
-}
+  const score = mergeScore(scored, local);
+  const invented = [...new Set([...qc.invented, ...sanitized.flatMap((s) =>
+    s.placeholders.filter((p) => p.includes("was not in the brief")).map((p) => p),
+  )])];
 
-function parseJson<T>(text: string): T {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end === -1) {
-    throw new Error("Model did not return JSON.");
-  }
-  return JSON.parse(text.slice(start, end + 1)) as T;
+  return {
+    facts,
+    missing: extracted.missing,
+    outline: outline.outline,
+    sections: sanitized,
+    qc: { ...qc, invented, ok: invented.length === 0 && qc.ok },
+    score,
+  };
 }

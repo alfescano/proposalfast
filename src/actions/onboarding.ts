@@ -63,6 +63,17 @@ export async function completeOnboarding(formData: FormData) {
   return { ok: true as const };
 }
 
+export async function updateFollowUpOptIn(enabled: boolean) {
+  const ctx = await requireOrg("ADMIN");
+  await prisma.settings.upsert({
+    where: { organizationId: ctx.organization.id },
+    create: { organizationId: ctx.organization.id, followUpOptIn: enabled },
+    update: { followUpOptIn: enabled },
+  });
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
 export async function skipOnboarding() {
   const ctx = await requireOrg("ADMIN");
   await prisma.settings.upsert({

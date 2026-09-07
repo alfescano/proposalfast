@@ -40,12 +40,21 @@ export async function createSubscriptionCheckout(input: {
       kind: "subscription",
     },
     subscription_data: {
+      trial_period_days: trialDays(),
       metadata: {
         organizationId: input.organizationId,
         tier: input.tier,
       },
     },
   });
+}
+
+function trialDays() {
+  const raw = process.env.STRIPE_TRIAL_DAYS;
+  if (!raw) return undefined;
+  const days = Number(raw);
+  if (!Number.isFinite(days) || days <= 0) return undefined;
+  return Math.min(30, Math.round(days));
 }
 
 export async function createCustomerPortalSession(stripeCustomerId: string) {
