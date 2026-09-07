@@ -72,17 +72,23 @@ export default async function PublicProposalPage({
 
   return (
     <main className="min-h-screen bg-[#f6f1e8] text-[#152033]">
+      <a
+        href="#proposal-body"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-10 focus:rounded-md focus:bg-[#152033] focus:px-3 focus:py-2 focus:text-[#fffdf8]"
+      >
+        Skip to proposal
+      </a>
       <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
-        <p className="text-xs tracking-[0.2em] text-[#8a7040] uppercase">Proposal</p>
+        <p className="text-xs tracking-[0.2em] text-[#5c4a24] uppercase">Proposal</p>
         <h1 className="mt-3 font-heading text-5xl">{proposal.title}</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm text-[#3d4a5c]">
           Prepared by {seller}
           {proposal.client ? ` for ${proposal.client.company || proposal.client.name}` : ""}
         </p>
         {proposal.organization.settings?.tagline ? (
           <p className="mt-2 text-sm italic">{proposal.organization.settings.tagline}</p>
         ) : null}
-        <div className="mt-10 space-y-8">
+        <div id="proposal-body" className="mt-10 space-y-8" tabIndex={-1}>
           {sections.map((section) => {
             const body =
               section.content && typeof section.content === "object" && "body" in section.content
@@ -106,6 +112,7 @@ export default async function PublicProposalPage({
           <SignPayPanel
             publicId={proposal.publicId}
             alreadySigned={Boolean(proposal.lockedAt || proposal.signatures[0])}
+            alreadyAccepted={Boolean(proposal.acceptedAt)}
             paymentEnabled={proposal.paymentEnabled && charge != null}
             amountLabel={amountLabel}
             signerDefaultName={proposal.client?.name ?? undefined}

@@ -75,6 +75,10 @@ async function seedSampleData() {
   const email = "alex@proposalfast.dev";
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
+    await prisma.user.update({
+      where: { id: existing.id },
+      data: { platformAdmin: process.env.NODE_ENV !== "production" },
+    });
     console.log("Sample user already exists:", email);
     return;
   }
@@ -89,6 +93,7 @@ async function seedSampleData() {
       name: "Alex Rivera",
       emailVerified: new Date(),
       passwordHash,
+      platformAdmin: true,
     },
   });
 

@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { FileText, LayoutDashboard, LogOut, Settings, Users, Library } from "lucide-react";
+import { FileText, LayoutDashboard, LogOut, Settings, Users, Library, Shield } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { logoutAction } from "@/actions/auth";
+import { OrgSwitcher } from "@/components/app/org-switcher";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,10 +16,18 @@ const links = [
 
 export function AppSidebar({
   organizationName,
+  organizationId,
   planName,
+  role,
+  isPlatformAdmin,
+  organizations,
 }: {
   organizationName: string;
+  organizationId: string;
   planName: string;
+  role: string;
+  isPlatformAdmin: boolean;
+  organizations: { id: string; name: string }[];
 }) {
   return (
     <aside className="flex w-full flex-col bg-sidebar text-sidebar-foreground md:h-screen md:w-64">
@@ -27,7 +36,7 @@ export function AppSidebar({
           <Logo className="text-sidebar-foreground" />
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 px-3">
+      <nav className="flex-1 space-y-1 px-3" aria-label="Workspace">
         {links.map((link) => (
           <Link
             key={link.href}
@@ -38,10 +47,25 @@ export function AppSidebar({
             {link.label}
           </Link>
         ))}
+        {isPlatformAdmin ? (
+          <Link
+            href="/admin"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          >
+            <Shield className="size-4" />
+            Platform admin
+          </Link>
+        ) : null}
       </nav>
       <div className="border-t border-sidebar-border p-4">
-        <p className="truncate text-sm font-medium">{organizationName}</p>
-        <p className="text-xs text-sidebar-foreground/60">{planName} plan</p>
+        {organizations.length > 1 ? (
+          <OrgSwitcher organizationId={organizationId} organizations={organizations} />
+        ) : (
+          <p className="truncate text-sm font-medium">{organizationName}</p>
+        )}
+        <p className="text-xs text-sidebar-foreground/60">
+          {planName} plan · {role.toLowerCase()}
+        </p>
         <form action={logoutAction}>
           <button
             type="submit"

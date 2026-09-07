@@ -5,6 +5,7 @@ import { requireOrg } from "@/lib/org";
 import { absoluteUrl } from "@/lib/site";
 import { ProposalEditor } from "@/components/app/proposal-editor";
 import { isProposalLocked } from "@/lib/proposal-lock";
+import { canWriteProposals } from "@/lib/rbac";
 import type { ScoreDimensions } from "@/lib/ai/schemas";
 
 export const metadata: Metadata = { title: "Edit proposal" };
@@ -16,6 +17,7 @@ export default async function ProposalDetailPage({
 }) {
   const { id } = await params;
   const ctx = await requireOrg();
+  const canWrite = canWriteProposals(ctx.role);
   const proposal = await prisma.proposal.findFirst({
     where: { id, organizationId: ctx.organization.id, deletedAt: null },
     include: {
@@ -72,6 +74,7 @@ export default async function ProposalDetailPage({
               : "",
         }))}
         score={score ?? null}
+        canWrite={canWrite}
       />
     </div>
   );

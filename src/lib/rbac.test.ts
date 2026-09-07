@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canManageBilling,
   canManageMembers,
+  canManageSettings,
   canViewOrg,
   canWriteProposals,
   hasRole,
@@ -17,5 +18,7 @@ describe("rbac", () => {
     expect(canWriteProposals("MEMBER")).toBe(true);
     expect(canWriteProposals("VIEWER")).toBe(false);
     expect(canViewOrg("VIEWER")).toBe(true);
+    expect(canManageSettings("ADMIN")).toBe(true);
+    expect(canManageSettings("MEMBER")).toBe(false);
   });
 });

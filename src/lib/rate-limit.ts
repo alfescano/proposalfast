@@ -31,3 +31,9 @@ export class RateLimitError extends Error {
     this.name = "RateLimitError";
   }
 }
+
+export function assertRateLimit(key: string, limit: number, windowMs = 60_000) {
+  const result = rateLimit({ key, limit, windowMs });
+  if (!result.ok) throw new RateLimitError();
+  return result;
+}

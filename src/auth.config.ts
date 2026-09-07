@@ -7,6 +7,7 @@ const APP_PREFIXES = [
   "/clients",
   "/library",
   "/settings",
+  "/admin",
 ];
 
 export const authConfig = {

@@ -1,6 +1,6 @@
 # ProposalFast architecture
 
-ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document covers Phase 1–3: foundation, CRM/proposals, then AI, e-sign, Stripe, email, and PDF.
+ProposalFast is a multi-tenant SaaS for creating, sending, tracking, signing, and collecting payment on client proposals. This document covers Phases 1–4: foundation, CRM/proposals, AI/e-sign/Stripe/PDF, then platform admin, teams, analytics, notifications, and security polish.
 
 ## Stack choices
 
@@ -27,12 +27,14 @@ src/app/
   (marketing)/          public site
   (auth)/               login, register, reset, verify
   (app)/                dashboard, proposals, clients, settings
+  (admin)/admin/        platform operators only (not org Admin)
   p/[publicId]/         client portal (no account)
+  invite/[token]        team invite accept/register
   api/auth/             Auth.js
   api/webhooks/stripe/  signed Stripe events
   api/inngest/          background jobs
-  api/contact/          marketing contact form
-src/actions/            server actions (auth, org, CRM, proposals)
+  api/contact/          marketing contact form → SupportRequest
+src/actions/            server actions (auth, org, CRM, proposals, team, account)
 src/auth.ts             Node runtime Auth.js (Prisma + credentials)
 src/auth.config.ts      Edge-safe config used by middleware
 src/lib/
@@ -63,7 +65,11 @@ src/lib/
 | Admin | Yes | Yes | Yes | No |
 | Owner | Yes | Yes | Yes | Yes |
 
-Enforced in `src/lib/rbac.ts` and `src/lib/org.ts`, not only in the UI.
+Enforced in `src/lib/rbac.ts` and `src/lib/org.ts`, not only in the UI. Workspace settings and notification prefs require Admin+. Data export and account deletion require Owner.
+
+Invites (`OrganizationInvite`) are email + role (Admin/Member/Viewer). Accepting from `/invite/[token]` adds a membership. Users with more than one org switch via the `pf_org` cookie.
+
+**Platform admin is not org Admin.** `/admin` calls `requirePlatformAdmin()` (`User.platformAdmin` or `PLATFORM_ADMIN_EMAILS`). Everyone else gets a 404 — the admin chrome is never rendered for normal users.
 
 ## Billing plans
 
@@ -119,15 +125,20 @@ If `INNGEST_EVENT_KEY` is unset, proposal generation still runs inline when `OPE
 - Auth.js JWT cookies, `trustHost: true`, `Secure` in production (HTTPS).
 - Stripe: `constructEvent` with `STRIPE_WEBHOOK_SECRET`. Unsigned bodies are 400.
 - IP addresses on views/signatures are hashed with `AUTH_SECRET`.
-- Rate limits on register, login, forgot-password, and contact (`src/lib/rate-limit.ts`). On Vercel, replace the in-process map with Upstash — same function signature.
-- Audit log on register, password reset, onboarding, client/proposal writes, and Stripe events.
+- Rate limits on register, login, forgot-password, contact, public sign/accept, and AI generate/rewrite (`src/lib/rate-limit.ts`). On Vercel, replace the in-process map with Upstash — same function signature.
+- Security headers in `next.config.ts`: `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`.
+- Audit log on register, password reset, onboarding, client/proposal writes, team changes, account deletion, and Stripe events.
+- Owner data export at `GET /settings/export`. Last-owner account deletion archives the org, clients, and proposals, then anonymizes the user.
 
 ## Public client portal
 
-`/p/[publicId]` is unauthenticated. It records a view (first open emails the owner), renders the latest sections, and offers:
+`/p/[publicId]` is unauthenticated. It records a view (first open emails the owner and writes an in-app notification), renders the latest sections, and offers:
 
+- **Accept** — name + email. Sets `ACCEPTED` / `acceptedAt` without locking.
 - **E-sign** — name, email, typed or drawn signature, consent checkbox. Persists `Signature` (version id, IP hash, user agent, timestamp) and locks every `ProposalVersion`. Further edits throw `ProposalLockedError`.
 - **Pay** — Stripe Checkout when `paymentEnabled` and an amount are set. Modes: FULL, DEPOSIT (% of `amountCents`), FIXED.
+
+The portal uses skip-to-content, labeled fields, a named signature pad, and ink-on-paper contrast for keyboard and screen-reader use.
 
 ## Stripe billing
 
@@ -149,8 +160,17 @@ Inngest `proposal/follow-up` sends only when **both** the workspace (`Settings.f
 2. Set every **REQUIRED** and **PRODUCT** key from `.env.example` on Vercel.
 3. `npx prisma migrate deploy`
 4. `npx prisma db seed` (plans + system templates; sample data stays off in production unless `SEED_SAMPLE_DATA=true`)
-5. Stripe webhook URL: `https://<host>/api/webhooks/stripe` (`checkout.session.completed`, `customer.subscription.*`)
+5. Stripe webhook URL: `https://<host>/api/webhooks/stripe` (`checkout.session.completed`, `customer.subscription.*`, `invoice.payment_failed`)
 6. Inngest app pointing at `/api/inngest`
 7. Domain: `proposalfast.com` (or the host Alfredo assigns). Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to that origin.
+8. Optional `PLATFORM_ADMIN_EMAILS` for the `/admin` console.
+
+Production migrate is `npx prisma migrate deploy` (never `migrate dev` against Neon). See the README for DNS and Vercel build command details.
+
+## Analytics and notifications
+
+Dashboard and `/admin` charts aggregate `ProposalEvent` (`created`, `sent`, `viewed`, `accepted`, `signed`) and succeeded `Payment` rows. Funnel: signup / members → first proposal → sent → opened → accepted → paid.
+
+In-app notifications (`Notification`) fire for opened / accepted / signed / paid / subscription failed. Workspace Admins toggle `Settings.notify*`. Stripe `invoice.payment_failed` writes the subscription-failed alert.
 
 Local loop: Postgres 16 (Docker Compose or the packages in this environment), `npm install`, `npx prisma migrate dev`, `npx prisma db seed`, `npm run dev` on port **43127**.

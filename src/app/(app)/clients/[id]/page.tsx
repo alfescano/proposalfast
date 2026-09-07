@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/org";
 import { ClientEditForm } from "@/components/app/client-form";
+import { canWriteProposals } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Client" };
 
@@ -14,6 +15,7 @@ export default async function ClientDetailPage({
 }) {
   const { id } = await params;
   const ctx = await requireOrg();
+  const canWrite = canWriteProposals(ctx.role);
   const client = await prisma.client.findFirst({
     where: { id, organizationId: ctx.organization.id, deletedAt: null },
     include: { proposals: { where: { deletedAt: null }, orderBy: { updatedAt: "desc" } } },
@@ -26,7 +28,15 @@ export default async function ClientDetailPage({
         <p className="text-xs tracking-[0.18em] text-accent uppercase">Client</p>
         <h1 className="mt-2 font-heading text-4xl">{client.name}</h1>
         <div className="mt-8">
-          <ClientEditForm client={client} />
+          {canWrite ? (
+            <ClientEditForm client={client} />
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-5 text-sm">
+              <p>{client.email || "No email"}</p>
+              <p className="mt-2 text-muted-foreground">{client.company || "Independent"}</p>
+              {client.notes ? <p className="mt-3 whitespace-pre-wrap">{client.notes}</p> : null}
+            </div>
+          )}
         </div>
       </div>
       <div>

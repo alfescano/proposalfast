@@ -17,7 +17,14 @@ export default function CookiePolicyPage() {
       <ul>
         <li>Auth.js session cookies (httpOnly, Secure in production, SameSite=Lax).</li>
         <li>CSRF tokens used during sign-in.</li>
+        <li>Active workspace cookie (`pf_org`) so team members stay in the right organization.</li>
       </ul>
+      <h2>Preference banner</h2>
+      <p>
+        Marketing pages show a cookie preference banner. Essential cookies are required to sign in.
+        Choosing “Accept” only stores that preference in localStorage — ProposalFast does not attach
+        advertising pixels today.
+      </p>
       <h2>Local development</h2>
       <p>
         On localhost the Secure flag may be omitted so the session cookie works over HTTP. Production

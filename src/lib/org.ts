@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { AuthorizationError, TenantError, canWriteProposals, hasRole } from "@/lib/rbac";
 import { PLAN_CATALOG, isWithinLimit } from "@/lib/plans";
 import { PlanLimitError } from "@/lib/rbac";
+import { getPreferredOrgId } from "@/lib/org-cookie";
 export { slugify, uniqueOrgSlug } from "@/lib/slug";
 
 export const getSessionUser = cache(async () => {
@@ -17,7 +18,7 @@ export const getCurrentOrgContext = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) return null;
 
-  const membership = await prisma.organizationMember.findFirst({
+  const memberships = await prisma.organizationMember.findMany({
     where: { userId: session.user.id, organization: { deletedAt: null } },
     include: {
       organization: {
@@ -31,11 +32,16 @@ export const getCurrentOrgContext = cache(async () => {
     orderBy: { createdAt: "asc" },
   });
 
-  if (!membership) return null;
+  if (!memberships.length) return null;
+
+  const preferred = await getPreferredOrgId();
+  const membership =
+    memberships.find((item) => item.organizationId === preferred) ?? memberships[0];
 
   return {
     user: membership.user,
     membership,
+    memberships,
     organization: membership.organization,
     role: membership.role,
     plan: membership.organization.subscription?.plan ?? null,

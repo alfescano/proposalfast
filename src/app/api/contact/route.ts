@@ -3,6 +3,7 @@ import { contactSchema } from "@/lib/validations/contact";
 import { getEmailAdapter, mail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
 import { siteConfig } from "@/lib/site";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for") ?? "anon";
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  await prisma.supportRequest.create({
+    data: {
+      name: parsed.data.name,
+      email: parsed.data.email,
+      subject: parsed.data.company ? `Contact: ${parsed.data.company}` : "Marketing contact",
+      message: parsed.data.message,
+      status: "open",
+    },
+  });
 
   const template = mail.templates.contactNotificationEmail(parsed.data);
   await getEmailAdapter().send({

@@ -8,8 +8,13 @@ export const metadata: Metadata = {
   description: "Log in to your ProposalFast workspace.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+  const { next } = await searchParams;
 
   return (
     <div>
@@ -23,6 +28,7 @@ export default function LoginPage() {
           pendingLabel="Signing in…"
           extra={<AuthSwitch href="/register" prompt="New here?" label="Create a workspace" />}
         >
+          {next ? <input type="hidden" name="next" value={next} /> : null}
           <Field name="email" label="Email" type="email" autoComplete="email" required />
           <Field
             name="password"

@@ -4,11 +4,13 @@ import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/org";
 import { EmptyState } from "@/components/states/empty-state";
 import { ClientCreateForm } from "@/components/app/client-form";
+import { canWriteProposals } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Clients" };
 
 export default async function ClientsPage() {
   const ctx = await requireOrg();
+  const canWrite = canWriteProposals(ctx.role);
   const clients = await prisma.client.findMany({
     where: { organizationId: ctx.organization.id, deletedAt: null },
     include: { _count: { select: { proposals: true } } },
@@ -45,12 +47,16 @@ export default async function ClientsPage() {
           </ul>
         )}
       </div>
-      <div>
-        <h2 className="font-heading text-2xl">Add a client</h2>
-        <div className="mt-4">
-          <ClientCreateForm />
+      {canWrite ? (
+        <div>
+          <h2 className="font-heading text-2xl">Add a client</h2>
+          <div className="mt-4">
+            <ClientCreateForm />
+          </div>
         </div>
-      </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">Viewers can read clients but cannot add or edit them.</p>
+      )}
     </div>
   );
 }

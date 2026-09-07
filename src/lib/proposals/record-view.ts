@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { hashIp } from "@/lib/crypto";
 import { mail, sendMail } from "@/lib/email";
 import { absoluteUrl } from "@/lib/site";
+import { notifyWorkspace } from "@/lib/notifications";
 
 export async function recordProposalView(input: {
   proposalId: string;
@@ -56,5 +57,12 @@ export async function recordProposalView(input: {
         }),
       );
     }
+    await notifyWorkspace({
+      organizationId: input.organizationId,
+      type: "opened",
+      title: "Proposal opened",
+      body: `${client?.client?.name ?? "A client"} opened “${input.title}”.`,
+      actionUrl: `/proposals/${input.proposalId}`,
+    });
   }
 }

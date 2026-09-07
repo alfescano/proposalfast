@@ -6,11 +6,13 @@ import { EmptyState } from "@/components/states/empty-state";
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { canWriteProposals } from "@/lib/rbac";
 
 export const metadata: Metadata = { title: "Proposals" };
 
 export default async function ProposalsPage() {
   const ctx = await requireOrg();
+  const canWrite = canWriteProposals(ctx.role);
   const proposals = await prisma.proposal.findMany({
     where: { organizationId: ctx.organization.id, deletedAt: null },
     include: { client: true },
@@ -24,9 +26,11 @@ export default async function ProposalsPage() {
           <p className="text-xs tracking-[0.18em] text-accent uppercase">Proposals</p>
           <h1 className="mt-2 font-heading text-4xl">Your pipeline</h1>
         </div>
-        <Link href="/proposals/new" className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}>
-          New proposal
-        </Link>
+        {canWrite ? (
+          <Link href="/proposals/new" className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}>
+            New proposal
+          </Link>
+        ) : null}
       </div>
 
       {proposals.length === 0 ? (
@@ -34,8 +38,8 @@ export default async function ProposalsPage() {
           <EmptyState
             title="Nothing drafted yet"
             description="Start from a system template. Pricing stays a placeholder until you type a number."
-            actionHref="/proposals/new"
-            actionLabel="Create a proposal"
+            actionHref={canWrite ? "/proposals/new" : undefined}
+            actionLabel={canWrite ? "Create a proposal" : undefined}
           />
         </div>
       ) : (

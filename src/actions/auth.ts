@@ -8,7 +8,7 @@ import { generateToken, sha256 } from "@/lib/crypto";
 import { getEmailAdapter, mail } from "@/lib/email";
 import { writeAuditLog } from "@/lib/audit";
 import { uniqueOrgSlug } from "@/lib/slug";
-import { RateLimitError, rateLimit } from "@/lib/rate-limit";
+import { RateLimitError, assertRateLimit } from "@/lib/rate-limit";
 import { absoluteUrl } from "@/lib/site";
 import {
   forgotPasswordSchema,
@@ -21,8 +21,7 @@ import {
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
 async function guard(key: string, limit = 8) {
-  const result = rateLimit({ key, limit, windowMs: 60_000 });
-  if (!result.ok) throw new RateLimitError();
+  assertRateLimit(key, limit, 60_000);
 }
 
 async function provisionWorkspace(input: {
@@ -154,10 +153,11 @@ export async function loginAction(
 
   try {
     await guard(`login:${parsed.data.email}`, 10);
+    const next = safeRedirectPath(formData.get("next"));
     await signIn("credentials", {
       email: parsed.data.email,
       password: parsed.data.password,
-      redirectTo: "/dashboard",
+      redirectTo: next,
     });
     return { ok: true };
   } catch (error) {
@@ -288,6 +288,14 @@ export async function verifyEmailAction(token: string, email: string): Promise<A
   ]);
 
   return { ok: true };
+}
+
+function safeRedirectPath(value: FormDataEntryValue | null) {
+  const next = String(value ?? "");
+  if (next.startsWith("/invite/") || next === "/dashboard" || next.startsWith("/onboarding") || next === "/settings") {
+    return next;
+  }
+  return "/dashboard";
 }
 
 export async function resendVerificationAction(): Promise<ActionResult> {

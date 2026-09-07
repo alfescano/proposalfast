@@ -182,6 +182,33 @@ export function subscriptionCanceledEmail(input: { name: string; settingsUrl: st
   return { subject: "ProposalFast subscription canceled", html, text };
 }
 
+export function teamInviteEmail(input: {
+  inviteeEmail: string;
+  orgName: string;
+  inviterName: string;
+  role: string;
+  inviteUrl: string;
+}) {
+  const text = `${input.inviterName} invited you to ${input.orgName} on ProposalFast as ${input.role}.\n${input.inviteUrl}`;
+  const { html } = wrap(
+    `Join ${input.orgName}`,
+    `<p>${escapeHtml(input.inviterName)} invited ${escapeHtml(input.inviteeEmail)} to the ${escapeHtml(input.orgName)} workspace as ${escapeHtml(input.role)}.</p>
+     ${button(input.inviteUrl, "Accept invite")}`,
+  );
+  return { subject: `Join ${input.orgName} on ProposalFast`, html, text };
+}
+
+export function subscriptionFailedEmail(input: { name: string; settingsUrl: string }) {
+  const text = `A ProposalFast subscription payment failed. Update your card: ${input.settingsUrl}`;
+  const { html } = wrap(
+    "Subscription payment failed",
+    `<p>Hi ${escapeHtml(input.name)},</p>
+     <p>Stripe reported a failed subscription charge. Update the payment method so the workspace stays on its paid plan.</p>
+     ${button(input.settingsUrl, "Update billing")}`,
+  );
+  return { subject: "ProposalFast payment failed", html, text };
+}
+
 export function followUpEmail(input: {
   clientName: string;
   senderName: string;

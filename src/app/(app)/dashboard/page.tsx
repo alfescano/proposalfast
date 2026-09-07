@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ProposalStatus } from "@prisma/client";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireOrg } from "@/lib/org";
@@ -7,23 +8,30 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatLimit } from "@/lib/plans";
 import { PLAN_CATALOG } from "@/lib/plans";
+import { canWriteProposals } from "@/lib/rbac";
+import { loadOrgAnalytics } from "@/lib/org-analytics";
+import { TrendChart } from "@/components/app/trend-chart";
+import { FunnelChart } from "@/components/app/funnel-chart";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const ctx = await requireOrg();
   const orgId = ctx.organization.id;
+  const canWrite = canWriteProposals(ctx.role);
 
-  const [proposals, clients, views, sent, pendingSignatures] = await Promise.all([
+  const sentWhere = { in: ["SENT", "VIEWED"] satisfies ProposalStatus[] };
+  const [proposals, clients, views, sent, pendingSignatures, analytics] = await Promise.all([
     prisma.proposal.count({ where: { organizationId: orgId, deletedAt: null } }),
     prisma.client.count({ where: { organizationId: orgId, deletedAt: null } }),
     prisma.proposalView.count({ where: { proposal: { organizationId: orgId } } }),
     prisma.proposal.count({
-      where: { organizationId: orgId, deletedAt: null, status: { in: ["SENT", "VIEWED"] } },
+      where: { organizationId: orgId, deletedAt: null, status: sentWhere },
     }),
     prisma.signature.count({
       where: { status: "PENDING", proposal: { organizationId: orgId, deletedAt: null } },
     }),
+    loadOrgAnalytics(orgId),
   ]);
 
   const recent = await prisma.proposal.findMany({
@@ -44,12 +52,14 @@ export default async function DashboardPage() {
           <p className="text-xs tracking-[0.18em] text-accent uppercase">Dashboard</p>
           <h1 className="mt-2 font-heading text-4xl">{ctx.organization.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Counts below are live from your workspace — not placeholders.
+            Counts and charts below are live from your workspace — not placeholders.
           </p>
         </div>
-        <Link href="/proposals/new" className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}>
-          New proposal
-        </Link>
+        {canWrite ? (
+          <Link href="/proposals/new" className={cn(buttonVariants({ size: "lg" }), "h-10 px-4")}>
+            New proposal
+          </Link>
+        ) : null}
       </div>
 
       {!verified ? (
@@ -66,6 +76,20 @@ export default async function DashboardPage() {
         <Stat label="Pending signatures" value={pendingSignatures} hint="E-sign queue" />
       </div>
 
+      <section className="mt-10 grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="font-heading text-2xl">Monthly trends</h2>
+          <TrendChart points={analytics.trends} />
+        </div>
+        <div className="rounded-2xl border border-border bg-card p-5">
+          <h2 className="font-heading text-2xl">Funnel</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Members → first proposal → sent → opened → accepted → paid
+          </p>
+          <FunnelChart steps={analytics.funnel} />
+        </div>
+      </section>
+
       <section className="mt-10">
         <h2 className="font-heading text-2xl">Recent proposals</h2>
         {recent.length === 0 ? (
@@ -73,8 +97,8 @@ export default async function DashboardPage() {
             <EmptyState
               title="No proposals yet"
               description="Create a client, pick a template, and write from facts you already have."
-              actionHref="/proposals/new"
-              actionLabel="Create a proposal"
+              actionHref={canWrite ? "/proposals/new" : undefined}
+              actionLabel={canWrite ? "Create a proposal" : undefined}
             />
           </div>
         ) : (

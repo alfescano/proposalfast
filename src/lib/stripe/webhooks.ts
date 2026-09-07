@@ -5,6 +5,7 @@ import { PLAN_CATALOG } from "@/lib/plans";
 import { writeAuditLog } from "@/lib/audit";
 import { mail, sendMail } from "@/lib/email";
 import { absoluteUrl } from "@/lib/site";
+import { notifyWorkspace } from "@/lib/notifications";
 
 const STATUS_MAP: Record<Stripe.Subscription.Status, SubscriptionStatus> = {
   incomplete: "INCOMPLETE",
@@ -50,6 +51,9 @@ export async function handleStripeEvent(event: Stripe.Event) {
         break;
       case "customer.subscription.deleted":
         await onSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        break;
+      case "invoice.payment_failed":
+        await onInvoicePaymentFailed(event.data.object as Stripe.Invoice);
         break;
       default:
         break;
@@ -119,6 +123,13 @@ async function onCheckoutCompleted(session: Stripe.Checkout.Session) {
           }),
         );
       }
+      await notifyWorkspace({
+        organizationId,
+        type: "paid",
+        title: "Payment received",
+        body: `A client paid for “${proposal?.title ?? "a proposal"}”.`,
+        actionUrl: proposal ? `/proposals/${proposal.id}` : "/dashboard",
+      });
     }
     return;
   }
@@ -225,6 +236,33 @@ async function onSubscriptionDeleted(sub: Stripe.Subscription) {
       settingsUrl: absoluteUrl("/settings"),
     }));
   }
+}
+
+async function onInvoicePaymentFailed(invoice: Stripe.Invoice) {
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  if (!customerId) return;
+  const subscription = await prisma.subscription.findFirst({
+    where: { stripeCustomerId: customerId },
+  });
+  if (!subscription) return;
+
+  const owner = await orgOwner(subscription.organizationId);
+  if (owner?.email) {
+    await sendMail(
+      owner.email,
+      mail.templates.subscriptionFailedEmail({
+        name: owner.name ?? "there",
+        settingsUrl: absoluteUrl("/settings"),
+      }),
+    );
+  }
+  await notifyWorkspace({
+    organizationId: subscription.organizationId,
+    type: "subscription_failed",
+    title: "Subscription payment failed",
+    body: "Stripe reported a failed subscription charge. Update the payment method in Settings.",
+    actionUrl: "/settings",
+  });
 }
 
 async function orgOwner(organizationId: string) {

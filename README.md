@@ -69,6 +69,7 @@ openssl rand -base64 32
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
 | `INNGEST_EVENT_KEY` / `INNGEST_SIGNING_KEY` | Background jobs |
 | `SEED_SAMPLE_DATA` | Dev-only demo user (default on locally) |
+| `PLATFORM_ADMIN_EMAILS` | Extra platform-admin emails for `/admin` |
 
 Without Resend, verification emails print to the server log (development only).
 
@@ -101,7 +102,7 @@ npm run build
 1. Create Products/Prices for Pro and Business (monthly + yearly).
 2. Put the price IDs in the `STRIPE_PRICE_*` vars.
 3. Webhook endpoint: `https://<host>/api/webhooks/stripe`
-4. Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`
+4. Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 5. Customer Portal is created via `createCustomerPortalSession` when `stripeCustomerId` exists.
 
 The app **does not** flip a plan because a button was clicked. Stripe webhooks write `Subscription`.
@@ -126,15 +127,34 @@ npx inngest-cli@latest dev
 
 Sync URL: `http://127.0.0.1:43127/api/inngest`
 
-## Deploy (Vercel + Neon/Supabase)
+## Deploy (Vercel + Neon/Postgres)
 
-1. Create a Vercel project from this repo.
-2. Attach a Neon or Supabase Postgres URL as `DATABASE_URL`.
-3. Copy every key from `.env.example` into Vercel env (Production + Preview).
-4. Build command: `prisma generate && prisma migrate deploy && next build`
-   (or keep `npm run build` and run `prisma migrate deploy` in a release command).
-5. Point `proposalfast.com` at Vercel. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposalfast.com`.
-6. Register the Stripe and Inngest endpoints on that host.
+1. Create a Vercel project from this repo (Framework Preset: Next.js).
+2. Create a Neon (or other Postgres 16) project. Copy the pooled connection string into Vercel as `DATABASE_URL` for Production and Preview.
+3. Copy every key from `.env.example` into Vercel env. Production values that must match the live host:
+   - `AUTH_URL=https://proposalfast.com`
+   - `NEXT_PUBLIC_APP_URL=https://proposalfast.com`
+   - `RESEND_FROM_EMAIL` on an authenticated sending domain
+   - Stripe price IDs + `STRIPE_WEBHOOK_SECRET` from the live endpoint
+   - Optional `PLATFORM_ADMIN_EMAILS` (comma-separated) for `/admin`
+4. Build command (Vercel project settings):
+
+   ```bash
+   prisma generate && prisma migrate deploy && next build
+   ```
+
+   `npm run build` already runs `prisma generate && next build`. **Always run `prisma migrate deploy` in production** — never `prisma migrate dev` against Neon.
+5. After the first successful deploy, run `npx prisma db seed` once (plans + system templates). Leave `SEED_SAMPLE_DATA` unset/false in production.
+6. **Domain / DNS for ProposalFast**
+   - Add `proposalfast.com` (and `www` if you want) in Vercel → Domains.
+   - At the registrar, point the apex to Vercel (`A` 10.0.1.2 or the records Vercel shows) and `www` as a CNAME to `cname.vercel-dns.com`.
+   - Wait for HTTPS to issue, then confirm `AUTH_URL` / `NEXT_PUBLIC_APP_URL` use `https://proposalfast.com`.
+7. **Stripe webhook**
+   - Endpoint URL: `https://proposalfast.com/api/webhooks/stripe`
+   - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+   - Paste the signing secret into `STRIPE_WEBHOOK_SECRET`.
+8. Inngest: sync `https://proposalfast.com/api/inngest`.
+9. Platform admin: set `User.platformAdmin` in the database or list emails in `PLATFORM_ADMIN_EMAILS`. Org **Admin** cannot open `/admin`.
 
 ## Scripts
 
@@ -143,7 +163,7 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 | `npm run dev` | Next.js on port 43127 |
 | `npm run build` | `prisma generate` + `next build` |
 | `npm start` | Production server on 43127 |
-| `npm test` | Vitest (auth + Prisma smoke) |
+| `npm test` | Vitest (auth, RBAC, isolation, proposal lifecycle, Prisma smoke) |
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Seed plans, templates, optional sample data |
 | `npm run lint` | ESLint |
@@ -155,3 +175,5 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 - Org data never crosses tenants.
 - Stripe webhooks are the subscription source of truth.
 - Clients view proposals at `/p/[publicId]` without an account.
+- `/admin` is platform operators only (`User.platformAdmin` or `PLATFORM_ADMIN_EMAILS`).
+- Team invites use Owner / Admin / Member / Viewer with server-side checks.

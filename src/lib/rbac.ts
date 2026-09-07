@@ -27,6 +27,10 @@ export function canViewOrg(role: Role) {
   return hasRole(role, "VIEWER");
 }
 
+export function canManageSettings(role: Role) {
+  return hasRole(role, "ADMIN");
+}
+
 export class AuthorizationError extends Error {
   constructor(message = "You do not have permission to do that.") {
     super(message);

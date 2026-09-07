@@ -14,6 +14,7 @@ import { proposalCreateSchema, proposalGenerateSchema, rewriteSelectionSchema } 
 import { isProposalLocked, ProposalLockedError } from "@/lib/proposal-lock";
 import { persistGeneratedVersion } from "@/lib/proposals/persist-generation";
 import { PlanLimitError } from "@/lib/rbac";
+import { RateLimitError, assertRateLimit } from "@/lib/rate-limit";
 
 type TemplateContent = {
   sections: { type: string; title: string; body?: string }[];
@@ -117,6 +118,14 @@ export async function createProposalAction(formData: FormData) {
 
   const brief = parsed.data.brief?.trim();
   if (parsed.data.useAi && brief && brief.length >= 20) {
+    try {
+      assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
+    } catch (error) {
+      if (error instanceof RateLimitError) {
+        return { ok: true as const, id: proposal.id, warning: error.message };
+      }
+      throw error;
+    }
     const facts = (parsed.data.facts ?? "")
       .split("\n")
       .map((line) => line.trim())
@@ -297,6 +306,12 @@ export async function sendProposalAction(proposalId: string) {
 
 export async function queueProposalGenerationAction(formData: FormData) {
   const ctx = await requireWritableOrg();
+  try {
+    assertRateLimit(`ai:${ctx.organization.id}:${ctx.user.id}`, 8, 60_000);
+  } catch (error) {
+    if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
+    throw error;
+  }
   const parsed = proposalGenerateSchema.safeParse({
     proposalId: formData.get("proposalId"),
     brief: formData.get("brief"),
@@ -378,6 +393,12 @@ export async function setProposalStatusAction(proposalId: string, status: Propos
 
 export async function rewriteSectionAction(formData: FormData) {
   const ctx = await requireWritableOrg();
+  try {
+    assertRateLimit(`ai-rewrite:${ctx.organization.id}:${ctx.user.id}`, 20, 60_000);
+  } catch (error) {
+    if (error instanceof RateLimitError) return { ok: false as const, error: error.message };
+    throw error;
+  }
   const parsed = rewriteSelectionSchema.safeParse({
     proposalId: formData.get("proposalId"),
     sectionId: formData.get("sectionId"),

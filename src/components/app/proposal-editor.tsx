@@ -32,6 +32,7 @@ export function ProposalEditor({
   clients,
   sections: initialSections,
   score,
+  canWrite = true,
 }: {
   proposal: {
     id: string;
@@ -52,13 +53,14 @@ export function ProposalEditor({
   clients: { id: string; label: string }[];
   sections: { id: string; title: string; body: string }[];
   score?: { overall: number; completeness: number; fidelity: number; notes: string[] } | null;
+  canWrite?: boolean;
 }) {
   const [sections, setSections] = useState(initialSections);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [selection, setSelection] = useState<{ sectionId: string; text: string } | null>(null);
-  const locked = proposal.locked;
+  const locked = proposal.locked || !canWrite;
 
   async function saveMeta(formData: FormData) {
     setPending(true);

@@ -84,6 +84,7 @@ model User {
   passwordHash  String?
   name          String?
   image         String?
+  platformAdmin Boolean   @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
@@ -91,6 +92,7 @@ model User {
   accounts            Account[]
   sessions            Session[]
   memberships         OrganizationMember[]
+  sentInvites         OrganizationInvite[] @relation("InviteSender")
   notifications       Notification[]
   auditLogs           AuditLog[]
   aiUsage             AIUsage[]
@@ -99,6 +101,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
 
   @@index([deletedAt])
+  @@index([platformAdmin])
 }
 
 model Account {
@@ -164,20 +167,58 @@ model Organization {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  members       OrganizationMember[]
-  settings      Settings?
-  subscription  Subscription?
-  clients       Client[]
-  proposals     Proposal[]
-  templates     ProposalTemplate[]
-  files         File[]
-  aiUsage       AIUsage[]
-  notifications Notification[]
-  followUps     FollowUp[]
-  auditLogs     AuditLog[]
-  payments      Payment[]
+  members         OrganizationMember[]
+  invites         OrganizationInvite[]
+  settings        Settings?
+  subscription    Subscription?
+  clients         Client[]
+  proposals       Proposal[]
+  templates       ProposalTemplate[]
+  files           File[]
+  aiUsage         AIUsage[]
+  notifications   Notification[]
+  followUps       FollowUp[]
+  auditLogs       AuditLog[]
+  payments        Payment[]
+  supportRequests SupportRequest[]
 
   @@index([deletedAt])
+}
+
+model OrganizationInvite {
+  id             String    @id @default(cuid())
+  organizationId String
+  email          String
+  role           Role      @default(MEMBER)
+  tokenHash      String    @unique
+  invitedById    String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation("InviteSender", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, email])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model SupportRequest {
+  id             String   @id @default(cuid())
+  organizationId String?
+  name           String
+  email          String
+  subject        String
+  message        String   @db.Text
+  status         String   @default("open")
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([email])
 }
 
 model OrganizationMember {
@@ -431,6 +472,7 @@ model Notification {
   type           String
   title          String
   body           String
+  actionUrl      String?
   readAt         DateTime?
   metadata       Json?
   createdAt      DateTime  @default(now())
@@ -532,6 +574,11 @@ model Settings {
   emailReplyTo        String?
   onboardingCompleted Boolean  @default(false)
   followUpOptIn       Boolean  @default(false)
+  notifyOpened        Boolean  @default(true)
+  notifyAccepted      Boolean  @default(true)
+  notifySigned        Boolean  @default(true)
+  notifyPaid          Boolean  @default(true)
+  notifySubscription  Boolean  @default(true)
   extras              Json?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
