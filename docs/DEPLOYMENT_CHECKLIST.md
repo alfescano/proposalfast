@@ -1,6 +1,6 @@
 # ProposalFast deployment checklist
 
-**Click-path for Origin → Vercel → `proposalfast.com`:** [docs/GO_LIVE.md](GO_LIVE.md).
+**Click-path for Origin → Vercel → `proposefast.com`:** [docs/GO_LIVE.md](GO_LIVE.md).
 
 This file is the operational list. It is not a substitute for `docs/PRODUCTION_READINESS_AUDIT.md`.
 
@@ -10,8 +10,8 @@ Use this only after local `npm run build` and `npx prisma migrate status` are cl
 
 - [ ] Vercel (or equivalent Node 20+) project created from this repo
 - [ ] Apex + optional `www` DNS pointed at the host; HTTPS issued
-- [ ] `AUTH_URL` = `https://<live-host>`
-- [ ] `NEXT_PUBLIC_APP_URL` = same origin (no trailing slash issues)
+- [ ] `AUTH_URL` = `https://proposefast.com`
+- [ ] `NEXT_PUBLIC_APP_URL` = `https://proposefast.com`
 - [ ] `AUTH_SECRET` = 32+ random bytes, unique to production
 
 ## 2. Database

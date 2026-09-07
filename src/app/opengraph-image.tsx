@@ -25,7 +25,7 @@ export default function OpenGraphImage() {
         <div style={{ fontSize: 72, lineHeight: 1.05, maxWidth: 900 }}>
           Client proposals that close — without invented numbers.
         </div>
-        <div style={{ fontSize: 24, color: "#C9A227" }}>proposalfast.com</div>
+        <div style={{ fontSize: 24, color: "#C9A227" }}>proposefast.com</div>
       </div>
     ),
     size,

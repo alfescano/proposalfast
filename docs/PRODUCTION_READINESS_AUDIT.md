@@ -131,7 +131,7 @@ Do **not** paste secret keys into chat. Create them in each vendor dashboard and
 
 1. Buy/point the apex (and optional `www`) to the Vercel project.
 2. Issue HTTPS.
-3. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposalfast.com` (or the live host).
+3. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposefast.com` (or the live host).
 4. Generate `AUTH_SECRET` with `openssl rand -base64 32` and store it only in the host.
 
 ### Vercel (or other Node host)
@@ -142,8 +142,8 @@ Do **not** paste secret keys into chat. Create them in each vendor dashboard and
 
 ### Resend (required to send email in production)
 
-1. Create a Resend account. Add and verify `proposalfast.com` (SPF/DKIM/DMARC as Resend instructs).
-2. Create an API key. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (e.g. `ProposalFast <noreply@proposalfast.com>`).
+1. Create a Resend account. Add and verify `proposefast.com` (SPF/DKIM/DMARC as Resend instructs).
+2. Create an API key. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (e.g. `ProposalFast <noreply@proposefast.com>`).
 3. Without these, production email **throws** — it will not silently succeed.
 
 ### Stripe (required for paid plans and proposal Checkout)

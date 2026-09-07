@@ -16,9 +16,9 @@ describe("platform admin gate", () => {
   });
 
   it("allows listed emails even without the flag", () => {
-    process.env.PLATFORM_ADMIN_EMAILS = "ops@proposalfast.com,  second@proposalfast.com";
-    expect(platformAdminEmails()).toEqual(["ops@proposalfast.com", "second@proposalfast.com"]);
-    expect(isPlatformAdminUser({ platformAdmin: false, email: "ops@proposalfast.com" })).toBe(true);
+    process.env.PLATFORM_ADMIN_EMAILS = "ops@proposefast.com,  second@proposefast.com";
+    expect(platformAdminEmails()).toEqual(["ops@proposefast.com", "second@proposefast.com"]);
+    expect(isPlatformAdminUser({ platformAdmin: false, email: "ops@proposefast.com" })).toBe(true);
   });
 
   it("does not treat org Admin as platform admin", () => {

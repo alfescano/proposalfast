@@ -9,13 +9,13 @@ describe("registerSchema", () => {
       password: "StrongPass1",
       organizationName: "Northline Studio",
     });
-    expect(parsed.email).toBe("alex@proposalfast.com");
+    expect(parsed.email).toBe("alex@proposefast.com");
   });
 
   it("rejects a short or weak password", () => {
     const result = registerSchema.safeParse({
       name: "Alex",
-      email: "alex@proposalfast.com",
+      email: "alex@proposefast.com",
       password: "short",
       organizationName: "Northline",
     });
@@ -27,7 +27,7 @@ describe("loginSchema", () => {
   it("requires an email and password", () => {
     expect(loginSchema.safeParse({ email: "not-an-email", password: "x" }).success).toBe(false);
     expect(
-      loginSchema.safeParse({ email: "alex@proposalfast.com", password: "anything" }).success,
+      loginSchema.safeParse({ email: "alex@proposefast.com", password: "anything" }).success,
     ).toBe(true);
   });
 });

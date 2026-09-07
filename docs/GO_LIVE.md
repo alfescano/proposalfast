@@ -1,8 +1,10 @@
-# Go live — ProposalFast (`proposalfast.com`)
+# Go live — ProposalFast (`proposefast.com`)
+
+Product name stays **ProposalFast**. The production hostname is **`proposefast.com`** (not `proposalfast.com`).
 
 This is the click-path to put the Origin repo on Vercel and attach the domain. **Secrets stay in dashboards.** Do not paste API keys into chat or commit them.
 
-As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment is **logged out** (no `VERCEL_TOKEN`). `https://proposalfast.com` does **not** serve this app (TLS error; HTTP hits a Hostinger `hcdn` parking page at `2.57.91.92`).
+As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment is **logged out** (no `VERCEL_TOKEN`). Do not treat the site as live until `https://proposefast.com` serves this app over HTTPS.
 
 ---
 
@@ -46,18 +48,31 @@ Official docs: [Vercel for Origin](https://vercel.com/docs/git/vercel-for-origin
 
 ---
 
-## 2. DNS for `proposalfast.com`
+## 2. Namecheap Advanced DNS for `proposefast.com`
 
-Today the apex and `www` resolve to **`2.57.91.92`** (Hostinger CDN), not Vercel. HTTPS on the apex currently fails TLS. Point DNS at Vercel **after** the project exists.
+Point DNS at Vercel **after** the Vercel project exists and the domain is added under **Settings → Domains**.
 
-1. In the Vercel project: **Settings → Domains → Add** `proposalfast.com` and `www.proposalfast.com`.
-2. Vercel will show the records it needs (typically):
-   - Apex: **A** to `10.0.1.2` *or* the nameservers / A record Vercel displays for *your* project (copy from the Domains page — do not guess).
-   - `www`: **CNAME** to `cname.vercel-dns.com` (or the CNAME Vercel shows).
-3. At the domain registrar (currently Hostinger-related DNS):
-   - Remove the parking A record `2.57.91.92`.
-   - Add exactly the records from the Vercel Domains page.
-4. Wait for DNS. Confirm **HTTPS** in a browser: `https://proposalfast.com` shows ProposalFast, not a parking page.
+**Nameservers (pick one):**
+
+- **Keep Namecheap PremiumDNS** (recommended if you already use it) and edit records under **Domain List → proposefast.com → Advanced DNS**.
+- **Or** switch to the **Vercel nameservers** shown on that project’s Domains page (then Vercel manages records). Do not mix both approaches.
+
+**Typical records if you stay on PremiumDNS / Advanced DNS:**
+
+| Type | Host | Value | TTL |
+| --- | --- | --- | --- |
+| A | `@` | `76.76.21.21` | Automatic / 30 min |
+| CNAME | `www` | `cname.vercel-dns.com.` | Automatic / 30 min |
+
+Also add any **Resend** SPF/DKIM (and optional DMARC) TXT records on the same Advanced DNS screen.
+
+**Important:** The A/CNAME values above are Vercel’s usual defaults. The **final** host and value **must match the Vercel Domains panel for this project**. If Vercel shows a different A record or a unique CNAME, use those instead of this table.
+
+Then:
+
+1. Vercel → **Settings → Domains → Add** `proposefast.com` and `www.proposefast.com`.
+2. Namecheap → remove leftover parking/URL-redirect records that conflict with the A/`www` CNAME.
+3. Wait for DNS. Confirm **HTTPS**: `https://proposefast.com` shows ProposalFast.
 
 ---
 
@@ -71,15 +86,15 @@ Today the apex and `www` resolve to **`2.57.91.92`** (Hostinger CDN), not Vercel
 | --- | --- |
 | `DATABASE_URL` | Neon (or other Postgres) → connection string (pooled is fine for Prisma on Vercel) |
 | `AUTH_SECRET` | Generate locally: `openssl rand -base64 32` → paste only in Vercel |
-| `AUTH_URL` | Set to `https://proposalfast.com` (no trailing slash) |
-| `NEXT_PUBLIC_APP_URL` | Same: `https://proposalfast.com` |
+| `AUTH_URL` | Set to `https://proposefast.com` (no trailing slash) |
+| `NEXT_PUBLIC_APP_URL` | Same: `https://proposefast.com` |
 
 ### Required to send email in production
 
 | Name | Where to create the value |
 | --- | --- |
 | `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys |
-| `RESEND_FROM_EMAIL` | After the domain is authenticated, e.g. `ProposalFast <noreply@proposalfast.com>` |
+| `RESEND_FROM_EMAIL` | After the domain is authenticated, e.g. `ProposalFast <noreply@proposefast.com>` |
 
 ### Required to charge (subscriptions + proposal Checkout)
 
@@ -140,7 +155,7 @@ Today the apex and `www` resolve to **`2.57.91.92`** (Hostinger CDN), not Vercel
 
 In Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
 
-- **URL:** `https://proposalfast.com/api/webhooks/stripe`
+- **URL:** `https://proposefast.com/api/webhooks/stripe`
 - **Events:** `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - Copy the endpoint **signing secret** into Vercel as `STRIPE_WEBHOOK_SECRET` (Production).
 - Redeploy after adding it so the new value is present.
@@ -151,7 +166,7 @@ Subscriptions update **only** from this verified webhook. The Checkout success p
 
 ## 5. Resend domain
 
-1. [resend.com](https://resend.com) → **Domains → Add** `proposalfast.com`.
+1. [resend.com](https://resend.com) → **Domains → Add** `proposefast.com`.
 2. Add the SPF / DKIM / (optional DMARC) records Resend shows at the same DNS host you used for Vercel.
 3. Wait until Resend marks the domain **Verified**.
 4. Set `RESEND_FROM_EMAIL` to an address on that domain.
@@ -189,9 +204,9 @@ Do not rely on the local demo `platformAdmin` flag — it is not created in prod
 
 ## 8. Post-deploy smoke checklist
 
-Run these on `https://proposalfast.com` only after HTTPS works:
+Run these on `https://proposefast.com` only after HTTPS works:
 
-- [ ] `https://proposalfast.com/api/health` → `{"ok":true,"service":"proposalfast"}`
+- [ ] `https://proposefast.com/api/health` → `{"ok":true,"service":"proposalfast"}`
 - [ ] Marketing home, `/pricing`, `/login`, `/register` load over HTTPS
 - [ ] `/dashboard` and `/settings` while logged out redirect to `/login`
 - [ ] Register → verification email arrives (Resend) → login → logout → login
@@ -202,7 +217,7 @@ Run these on `https://proposalfast.com` only after HTTPS works:
 - [ ] `/admin` 404 for a normal user; loads for `PLATFORM_ADMIN_EMAILS`
 - [ ] Stripe: test Checkout (test mode first) → webhook updates `Subscription`
 - [ ] If OpenAI is set: generate from a brief; missing fees stay `[PLACEHOLDER]`
-- [ ] `proposalfast.com` is **this** app, not a Hostinger parking page
+- [ ] `https://proposefast.com` is **this** app (ProposalFast), not a registrar parking page
 
 ---
 
@@ -213,7 +228,7 @@ Run these on `https://proposalfast.com` only after HTTPS works:
 | `npm run build:production` + `vercel.json` | Log into Vercel Pro and **Continue with Origin** |
 | Sample seed hard-blocked in production | Create Neon DB and set `DATABASE_URL` |
 | Go-live click-path documented | Generate `AUTH_SECRET`; set `AUTH_URL` / `NEXT_PUBLIC_APP_URL` |
-| Code pushed to Origin `main` | Attach `proposalfast.com` DNS at the registrar → Vercel |
+| Code pushed to Origin `main` | Namecheap Advanced DNS → Vercel; attach `proposefast.com` |
 | | Resend domain + API key |
 | | Stripe prices + webhook |
 | | `PLATFORM_ADMIN_EMAILS` |

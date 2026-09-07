@@ -1,12 +1,12 @@
 export const siteConfig = {
   name: "ProposalFast",
-  domain: "proposalfast.com",
+  domain: "proposefast.com",
   tagline: "Win the work. Faster.",
   description:
     "ProposalFast is the AI-powered proposal workspace for agencies and consultants. Draft from your facts, send a branded client portal, track every view, collect an e-signature, and take payment — without inventing a single number.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://127.0.0.1:43127",
-  email: "hello@proposalfast.com",
-  supportEmail: "support@proposalfast.com",
+  email: "hello@proposefast.com",
+  supportEmail: "support@proposefast.com",
   twitter: "@proposalfast",
 };
 
