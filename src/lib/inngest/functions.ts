@@ -6,8 +6,7 @@ import { renderProposalPdf } from "@/lib/pdf/render";
 import { getStorage } from "@/lib/storage/s3";
 
 export const generateProposalJob = inngest.createFunction(
-  { id: "proposal-generate" },
-  { event: "proposal/generate" },
+  { id: "proposal-generate", triggers: { event: "proposal/generate" } },
   async ({ event, step }) => {
     const { proposalId, brief, facts, organizationId, userId } = event.data as {
       proposalId: string;
@@ -60,30 +59,31 @@ export const generateProposalJob = inngest.createFunction(
 );
 
 export const sendEmailJob = inngest.createFunction(
-  { id: "email-send" },
-  { event: "email/send" },
+  { id: "email-send", triggers: { event: "email/send" } },
   async ({ event }) => {
     const adapter = getEmailAdapter();
-    return adapter.send(event.data);
+    return adapter.send(event.data as import("@/lib/email/adapter").EmailMessage);
   },
 );
 
 export const renderPdfJob = inngest.createFunction(
-  { id: "proposal-pdf" },
-  { event: "proposal/pdf" },
+  { id: "proposal-pdf", triggers: { event: "proposal/pdf" } },
   async ({ event, step }) => {
     const { proposalId, organizationId } = event.data as {
       proposalId: string;
       organizationId: string;
     };
 
-    const bytes = await step.run("render", async () => renderProposalPdf(proposalId));
+    const bytes = await step.run("render", async () => {
+      const buffer = await renderProposalPdf(proposalId);
+      return Array.from(buffer);
+    });
     const stored = await step.run("upload", async () => {
       const storage = getStorage();
       const key = `org/${organizationId}/proposals/${proposalId}.pdf`;
       return storage.put({
         key,
-        body: bytes,
+        body: Buffer.from(bytes),
         contentType: "application/pdf",
       });
     });
@@ -92,8 +92,7 @@ export const renderPdfJob = inngest.createFunction(
 );
 
 export const followUpJob = inngest.createFunction(
-  { id: "proposal-follow-up" },
-  { event: "proposal/follow-up" },
+  { id: "proposal-follow-up", triggers: { event: "proposal/follow-up" } },
   async ({ event }) => {
     const { followUpId } = event.data as { followUpId: string };
     const followUp = await prisma.followUp.findUnique({
