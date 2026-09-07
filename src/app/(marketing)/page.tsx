@@ -1,0 +1,141 @@
+import Link from "next/link";
+import { Check, FileText, PenLine, Signature, Wallet } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { siteConfig } from "@/lib/site";
+import { PLAN_CATALOG, formatPrice } from "@/lib/plans";
+
+const steps = [
+  {
+    title: "Collect the facts",
+    body: "Paste the brief, the fee, and the dates you already have. Missing pieces stay visible as [PLACEHOLDER] — the model is not allowed to invent them.",
+  },
+  {
+    title: "Edit the draft",
+    body: "Every section is yours to rewrite. Versions stay on the proposal so you can see what went to the client.",
+  },
+  {
+    title: "Send, sign, get paid",
+    body: "The client opens a public portal. You see the views. They sign and pay through Stripe Checkout — no second tool.",
+  },
+];
+
+const features = [
+  { icon: FileText, title: "Proposal workspace", body: "Create, version, and brand proposals inside one organization — never across tenants." },
+  { icon: PenLine, title: "Fact-bound AI", body: "Extract → outline → generate → QC → score. Invented prices and case studies are rejected." },
+  { icon: Signature, title: "E-sign", body: "Consent text, signer identity, and a stored signature artifact. Not a screenshot of a pen." },
+  { icon: Wallet, title: "Stripe payments", body: "Subscriptions and per-proposal Checkout. Webhooks write the subscription — the UI does not." },
+];
+
+export default function HomePage() {
+  return (
+    <main>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,#c9a22722,transparent_40%),radial-gradient(circle_at_bottom_left,#15203314,transparent_35%)]" />
+        <div className="relative mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
+          <div>
+            <p className="text-xs tracking-[0.22em] text-accent uppercase">Proposal software for people who invoice</p>
+            <h1 className="mt-4 font-heading text-5xl leading-[1.05] text-balance sm:text-6xl">
+              Client proposals that close — without invented numbers.
+            </h1>
+            <p className="mt-5 max-w-xl text-lg leading-7 text-muted-foreground">
+              {siteConfig.description}
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "h-11 px-5")}>
+                Create a workspace
+              </Link>
+              <Link
+                href="/templates"
+                className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-11 px-5")}
+              >
+                Browse templates
+              </Link>
+            </div>
+            <ul className="mt-8 space-y-2 text-sm text-muted-foreground">
+              {[
+                "Email and password auth, with Google optional",
+                "Plan limits enforced on the server",
+                "Client portal at /p/[id] — no account required",
+              ].map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <Check className="mt-0.5 size-4 text-accent" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <ProposalPreview />
+        </div>
+      </section>
+
+      <section className="border-y border-border bg-card">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-3">
+          {steps.map((step, index) => (
+            <div key={step.title}>
+              <p className="text-xs tracking-[0.18em] text-accent uppercase">0{index + 1}</p>
+              <h2 className="mt-3 font-heading text-2xl">{step.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">{step.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 className="font-heading text-4xl">The path from brief to paid work</h2>
+        <div className="mt-10 grid gap-4 md:grid-cols-2">
+          {features.map((feature) => (
+            <div key={feature.title} className="rounded-2xl border border-border bg-card p-6">
+              <feature.icon className="size-5 text-accent" />
+              <h3 className="mt-4 font-heading text-2xl">{feature.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="border-t border-border bg-[#152033] text-[#f6f1e8]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-16 sm:px-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="font-heading text-4xl">Start on Free. Upgrade when the work does.</h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
+              {PLAN_CATALOG.FREE.name} includes {PLAN_CATALOG.FREE.limits.maxProposals} proposals.
+              Pro is {formatPrice(PLAN_CATALOG.PRO.monthlyPriceCents)} / month. Stripe is the source
+              of truth after you subscribe.
+            </p>
+          </div>
+          <Link href="/pricing" className={cn(buttonVariants({ size: "lg" }), "h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90")}>
+            Compare plans
+          </Link>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ProposalPreview() {
+  return (
+    <div className="rounded-[28px] border border-[#d7c9ae] bg-[#fffdf8] p-5 shadow-[0_24px_80px_-32px_rgba(21,32,51,0.45)]">
+      <div className="flex items-center justify-between text-[11px] tracking-[0.16em] text-[#8a7040] uppercase">
+        <span>Client portal</span>
+        <span>Viewed 3 times</span>
+      </div>
+      <div className="mt-5 border-t border-[#efe3cf] pt-5">
+        <p className="text-xs text-muted-foreground">Northline Studio → Harbor &amp; Co</p>
+        <h3 className="mt-2 font-heading text-3xl">Brand system, Q3</h3>
+        <p className="mt-4 text-sm leading-6 text-muted-foreground">
+          Scope, timeline, and fee come from your brief. The gold marks are placeholders the writer
+          still has to fill — not numbers the model guessed.
+        </p>
+        <div className="mt-6 space-y-3">
+          {["Scope of work", "Investment [PLACEHOLDER: fee]", "Signature"].map((row) => (
+            <div key={row} className="flex items-center justify-between rounded-xl bg-[#f6f1e8] px-4 py-3 text-sm">
+              <span>{row}</span>
+              <span className="text-xs tracking-wide text-accent uppercase">Section</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

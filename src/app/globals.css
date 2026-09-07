@@ -1,26 +1,137 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-heading);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-gold: var(--gold);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --paper: #f6f1e8;
+  --ink: #152033;
+  --gold: #c9a227;
+  --background: #f6f1e8;
+  --foreground: #152033;
+  --card: #fffdf8;
+  --card-foreground: #152033;
+  --popover: #fffdf8;
+  --popover-foreground: #152033;
+  --primary: #152033;
+  --primary-foreground: #f6f1e8;
+  --secondary: #e8dfcf;
+  --secondary-foreground: #152033;
+  --muted: #efe6d6;
+  --muted-foreground: #5c6574;
+  --accent: #c9a227;
+  --accent-foreground: #152033;
+  --destructive: #9f2a2a;
+  --border: #e0d4bf;
+  --input: #e0d4bf;
+  --ring: #c9a227;
+  --chart-1: #152033;
+  --chart-2: #c9a227;
+  --chart-3: #3f6f6d;
+  --chart-4: #8a7040;
+  --chart-5: #5c6574;
+  --radius: 0.75rem;
+  --sidebar: #101828;
+  --sidebar-foreground: #f6f1e8;
+  --sidebar-primary: #c9a227;
+  --sidebar-primary-foreground: #101828;
+  --sidebar-accent: #1c2a3f;
+  --sidebar-accent-foreground: #f6f1e8;
+  --sidebar-border: #243247;
+  --sidebar-ring: #c9a227;
+}
+
+.dark {
+  --background: #101828;
+  --foreground: #f6f1e8;
+  --card: #152033;
+  --card-foreground: #f6f1e8;
+  --popover: #152033;
+  --popover-foreground: #f6f1e8;
+  --primary: #f6f1e8;
+  --primary-foreground: #152033;
+  --secondary: #1c2a3f;
+  --secondary-foreground: #f6f1e8;
+  --muted: #1c2a3f;
+  --muted-foreground: #c5cdd8;
+  --accent: #c9a227;
+  --accent-foreground: #152033;
+  --destructive: #f0a0a0;
+  --border: #2b3a51;
+  --input: #2b3a51;
+  --ring: #c9a227;
+  --sidebar: #0c1220;
+  --sidebar-foreground: #f6f1e8;
+  --sidebar-primary: #c9a227;
+  --sidebar-primary-foreground: #101828;
+  --sidebar-accent: #1c2a3f;
+  --sidebar-accent-foreground: #f6f1e8;
+  --sidebar-border: #243247;
+  --sidebar-ring: #c9a227;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  .font-heading {
+    font-family: var(--font-heading), ui-serif, Georgia, serif;
+  }
 }

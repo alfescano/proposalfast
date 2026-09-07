@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: proposalfast
+      POSTGRES_PASSWORD: proposalfast_dev
+      POSTGRES_DB: proposalfast
+    ports:
+      - "5432:5432"
+    volumes:
+      - proposalfast_pg:/var/lib/postgresql/data
+
+volumes:
+  proposalfast_pg:
