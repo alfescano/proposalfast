@@ -42,6 +42,7 @@
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "openai": "^7.10.0",
+    "pdfkit": "0.20.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.87.0",
@@ -55,6 +56,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.55.1",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.20.1",
@@ -63,7 +65,6 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
-    "@playwright/test": "^1.55.1",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "prisma": "6.19.3",

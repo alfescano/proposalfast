@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { isWithinLimit, PLAN_CATALOG } from "@/lib/plans";
 import { PlanLimitError } from "@/lib/rbac";
 import { PlanTier } from "@prisma/client";
+import { chatCompletionSampling } from "./sampling";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -48,7 +49,7 @@ export class AIService {
     const response = await this.client.chat.completions.create({
       model,
       messages: args.messages,
-      temperature: 0.2,
+      ...chatCompletionSampling(model),
       ...(args.json ? { response_format: { type: "json_object" } } : {}),
     });
 

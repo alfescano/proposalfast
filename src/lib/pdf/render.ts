@@ -7,6 +7,9 @@ import { chargeAmountCents, paymentLabel } from "@/lib/payments";
  * PDF engine: @react-pdf/renderer
  * Chosen over Puppeteer because it has no Chromium binary, fits Vercel serverless
  * memory/time limits, and produces deterministic multi-page proposal layouts.
+ *
+ * pdfkit standard fonts must stay on disk (see next.config.ts serverExternalPackages
+ * + outputFileTracingIncludes). Next's bundler otherwise drops Helvetica.cjs.
  */
 export async function renderProposalPdf(proposalId: string) {
   const proposal = await prisma.proposal.findFirst({

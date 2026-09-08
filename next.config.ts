@@ -1,7 +1,27 @@
 import type { NextConfig } from "next";
 
+const pdfkitFontGlobs = [
+  "./node_modules/pdfkit/js/standard-fonts/**/*",
+  "./node_modules/pdfkit/js/data/**/*",
+];
+
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@prisma/client", "bcryptjs", "inngest", "@upstash/redis", "@sentry/nextjs"],
+  // pdfkit loads Helvetica.cjs (and Times) from disk. Bundling drops those files
+  // and Vercel fails with "Cannot find module .../pdfkit/js/standard-fonts/Helvetica.cjs".
+  serverExternalPackages: [
+    "@prisma/client",
+    "bcryptjs",
+    "inngest",
+    "@upstash/redis",
+    "@sentry/nextjs",
+    "@react-pdf/renderer",
+    "@react-pdf/font",
+    "pdfkit",
+  ],
+  outputFileTracingIncludes: {
+    "/*": pdfkitFontGlobs,
+    "/proposals/[id]/pdf": pdfkitFontGlobs,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "**.amazonaws.com" },
