@@ -8,80 +8,58 @@ As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment
 
 ---
 
-## 0. Origin identity (this repo)
+## 0. Origin identity (import this repo on Vercel)
 
-Connecting Vercel to the **`alfredo-escano`** namespace is not enough if the Vercel Git app cannot see **this** repository.
+**Vercel search slug:** `proposalfast`  
+**Owner / repo:** `alfredo-escano/proposalfast`  
+**Codebase URL:** [cursor.com/codebase/alfredo-escano/proposalfast](https://cursor.com/codebase/alfredo-escano/proposalfast)  
+**Official clone URL:** `https://origin.cursor.com/alfredo-escano/proposalfast.git`  
+**Alternate git remote:** `https://origin.cursor.com/git/alfredo-escano/proposalfast.git`
 
-| Field | Value |
-| --- | --- |
-| Owner / slug | `alfredo-escano/tmp-560debf81f44db87` |
-| Default branch | `main` |
-| Repo UUID | `r_01m1yte38rem1bm8k96q8jvy3p` |
-| Origin namespace id | `ns_01m1a6y3aqe08s9he0wrwb39cg` |
-| Mirror | none (`mirrorStatus: no-mirror`; no GitHub node / installation) |
-| Official clone URL | `https://origin.cursor.com/alfredo-escano/tmp-560debf81f44db87.git` |
-| Workspace / agent git remote | `https://origin.cursor.com/git/alfredo-escano/tmp-560debf81f44db87.git` |
-| Codebase namespace | [cursor.com/codebase/alfredo-escano](https://cursor.com/codebase/alfredo-escano) |
-| Likely repo page | [cursor.com/codebase/alfredo-escano/tmp-560debf81f44db87](https://cursor.com/codebase/alfredo-escano/tmp-560debf81f44db87) |
-| Get started | [cursor.com/codebase/get-started](https://cursor.com/codebase/get-started) |
+The product name **ProposalFast** and the hostname **`proposefast.com`** are not the git slug. In Vercel **Add New… → Project → Continue with Origin**, search **`proposalfast`**. Do not search `ProposalFast` or `proposefast.com`.
 
-The product name **ProposalFast** and the hostname **`proposefast.com`** are **not** the git slug of this Cloud Agent workspace. The Vercel Origin picker searches Origin repo names that appear in `origin repo list`.
-
-**Rename:** Origin CLI has `create`, `list`, `view`, `clone`, and `delete` only. There is **no** rename command. Do **not** `origin repo delete` the tmp slug.
+This Cloud Agent workspace still tracks a separate tmp remote (`alfredo-escano/tmp-560debf81f44db87`). That tmp slug does **not** appear in `origin repo list` and is not the Vercel import target.
 
 ---
 
-## 0.1 Create `alfredo-escano/proposalfast` (required for Vercel)
+## 0.1 Push `main` into `proposalfast` (you — Cloud Agent cannot)
 
-**Intended import slug (does not exist yet):** `proposalfast`  
-**Intended owner/repo:** `alfredo-escano/proposalfast`  
-**Intended Codebase URL:** [cursor.com/codebase/alfredo-escano/proposalfast](https://cursor.com/codebase/alfredo-escano/proposalfast)  
-**Intended clone URL:** `https://origin.cursor.com/alfredo-escano/proposalfast.git`
+Checked 2026-09-08 after the Codebase UI create:
 
-A Cloud Agent cannot create this repo. On 2026-09-08:
+- `origin repo list --namespace alfredo-escano` **includes** `alfredo-escano/proposalfast` with clone URL `https://origin.cursor.com/alfredo-escano/proposalfast.git`.
+- `origin repo view alfredo-escano/proposalfast` → `Your Origin token is not scoped for alfredo-escano/proposalfast.`
+- `git remote add proposalfast https://origin.cursor.com/alfredo-escano/proposalfast.git`
+- `git push proposalfast main` and `git ls-remote` → `The requested URL returned error: 403`
+- Git receive-pack with this workspace’s `x-access-token`:
 
-```text
-origin repo create alfredo-escano/proposalfast --default-branch main
-# Error: Your Origin token is not scoped for this operation on alfredo-escano.
-# This is a limit on the token, not on your account's access to the repository.
+```json
+{
+  "error": "You do not have access to alfredo-escano/proposalfast on Origin. Contact your team admin if you believe this is a mistake.",
+  "reason": "repository_access_denied"
+}
 ```
 
-`origin repo view alfredo-escano/proposalfast` → not found.  
-`origin repo list --namespace alfredo-escano` → only `alfredo-escano/alpha-engine`.
+The repo exists and is listed, but it is still **empty** until someone with a full Origin login pushes. Do **not** import it on Vercel until `README.md` / `package.json` are on `main`.
 
-Cursor docs: [Create an Origin repository](https://cursor.com/docs/origin/create-repository). Cloud agents can only work against **existing** Origin repos.
-
-### Click path (you, in the browser)
-
-1. Open [cursor.com/codebase](https://cursor.com/codebase) while logged in as the owner of namespace **`alfredo-escano`**.
-2. Open the **`alfredo-escano`** codebase (URL: [cursor.com/codebase/alfredo-escano](https://cursor.com/codebase/alfredo-escano)).
-3. Select **New** (or **+ New**).
-4. In the **New repo** dialog:
-   - **Repo Name:** `proposalfast` (exact slug — not `ProposalFast`, not `proposefast.com`)
-   - **Visibility:** **Private** (or **Internal** if only your Cursor team should see it). All Origin repos are private to Vercel Hobby either way; Vercel still needs **Pro or Enterprise**.
-5. Select **Create Repo**.
-6. Confirm the repo page is [cursor.com/codebase/alfredo-escano/proposalfast](https://cursor.com/codebase/alfredo-escano/proposalfast).
-7. Come back to this agent (or run the CLI below) so `main` can be pushed to the new remote.
-
-### CLI path (you, on your machine — not this Cloud Agent)
+### Push from your machine (`origin auth login`)
 
 ```bash
 origin auth login
-origin repo create alfredo-escano/proposalfast --default-branch main
-origin repo list --namespace alfredo-escano
-# expect: alfredo-escano/proposalfast
-```
+origin repo view alfredo-escano/proposalfast
 
-After the empty repo exists, this agent (or you) can:
-
-```bash
+# Full history lives on the Cloud Agent tmp remote:
+git clone https://origin.cursor.com/git/alfredo-escano/tmp-560debf81f44db87.git proposalfast-src
+cd proposalfast-src
 git remote add proposalfast https://origin.cursor.com/alfredo-escano/proposalfast.git
 git push -u proposalfast main
+
+origin repo list --namespace alfredo-escano
+# expect alfredo-escano/proposalfast
 ```
 
-Then in Vercel **Add New… → Project → Continue with Origin**, search **`proposalfast`**.
+If the tmp clone is denied, clone the empty named repo and copy this tree in, or open a **Desktop / local** Cursor agent (not Cloud) that has your Origin login and ask it to push `main`.
 
-Do **not** invent a GitHub URL. The tmp workspace has no GitHub mirror. Domain stays **`proposefast.com`**.
+Then in Vercel search **`proposalfast`**. Domain stays **`proposefast.com`**. Do not invent a GitHub URL.
 
 ---
 
@@ -98,8 +76,8 @@ Vercel does **not** document importing the Origin HTTPS clone URL as a generic G
 1. Open [vercel.com/dashboard](https://vercel.com/dashboard) and select the **Pro** team (not Hobby).
 2. **Add New… → Project**.
 3. Click **Continue with Origin**.
-4. Authorize the Origin team / `alfredo-escano` namespace when prompted, then **also** grant the Vercel app this repo (section 0.1).
-5. After section 0.1, search **`proposalfast`**. Select `alfredo-escano/proposalfast`. Do not search `ProposalFast` or `proposefast.com`.
+4. Authorize the Origin team / `alfredo-escano` namespace when prompted, then grant the Vercel app **`proposalfast`** (Settings → Git → Origin → Manage on Cursor if the picker is empty).
+5. Search **`proposalfast`**. Select `alfredo-escano/proposalfast`. Do not search `ProposalFast` or `proposefast.com`.
 6. Framework Preset: **Next.js** (should autodetect).
 7. Override build settings only if Vercel ignored `vercel.json`:
    - **Install Command:** `npm ci`
@@ -110,7 +88,7 @@ Vercel does **not** document importing the Origin HTTPS clone URL as a generic G
 
 ### Option B — from Origin Apps (best when the picker is empty)
 
-1. Open [alfredo-escano/proposalfast in Codebase](https://cursor.com/codebase/alfredo-escano/proposalfast) after you create it (section 0.1).
+1. Open [alfredo-escano/proposalfast in Codebase](https://cursor.com/codebase/alfredo-escano/proposalfast).
 2. Open the **Apps** tab on **that** repository.
 3. Add / connect **Vercel**.
 4. Finish in the Vercel project that appears; set the same build command and env vars.
@@ -120,8 +98,8 @@ Vercel does **not** document importing the Origin HTTPS clone URL as a generic G
 Use these for `git clone` / adding a second remote. They are **not** a documented Vercel “Import Git URL” path:
 
 ```text
-https://origin.cursor.com/alfredo-escano/tmp-560debf81f44db87.git
-https://origin.cursor.com/git/alfredo-escano/tmp-560debf81f44db87.git
+https://origin.cursor.com/alfredo-escano/proposalfast.git
+https://origin.cursor.com/git/alfredo-escano/proposalfast.git
 ```
 
 There is no GitHub import URL for this project (`githubNodeId` is null). `origin repo create-mirrored` copies **GitHub → Origin**, not the reverse.
@@ -305,7 +283,7 @@ Run these on `https://proposefast.com` only after HTTPS works:
 
 | Done in the repo | Still only you can do (dashboards) |
 | --- | --- |
-| `npm run build:production` + `vercel.json` | Create `alfredo-escano/proposalfast` in Codebase (section 0.1), then **Continue with Origin** on a Pro team and search `proposalfast` |
+| `npm run build:production` + `vercel.json` | Push `main` to `proposalfast` from a full Origin login (section 0.1), then **Continue with Origin** on a Pro team and search `proposalfast` |
 | Sample seed hard-blocked in production | Create Neon DB and set `DATABASE_URL` |
 | Go-live click-path documented | Generate `AUTH_SECRET`; set `AUTH_URL` / `NEXT_PUBLIC_APP_URL` |
 | Code pushed to Origin `main` | Namecheap Advanced DNS → Vercel; attach `proposefast.com` |
