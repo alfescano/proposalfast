@@ -4,6 +4,7 @@ import { generateToken, sha256 } from "@/lib/crypto";
 import { writeAuditLog } from "@/lib/audit";
 import { uniqueOrgSlug } from "@/lib/slug";
 import { registerSchema } from "@/lib/validations/auth";
+import { ensureDefaultPlans } from "@/lib/ensure-default-plans";
 
 export async function provisionWorkspace(input: {
   userId: string;
@@ -11,10 +12,7 @@ export async function provisionWorkspace(input: {
   organizationName: string;
 }) {
   const slug = await uniqueOrgSlug(input.organizationName);
-  const free = await prisma.plan.findUnique({ where: { tier: "FREE" } });
-  if (!free) {
-    throw new Error("Plans are not seeded. Run `npx prisma db seed`.");
-  }
+  const { free } = await ensureDefaultPlans();
 
   return prisma.organization.create({
     data: {

@@ -244,7 +244,8 @@ That runs **on each Vercel production build** once `DATABASE_URL` is set.
 
 - Create the Neon project **before** the first successful production build.
 - Never run `prisma migrate dev` against production.
-- Catalog seed (plans + system templates only) is safe: `npx prisma db seed` with `NODE_ENV=production` skips demo users. You can run it once from a machine that has the production `DATABASE_URL` if Plan rows are missing.
+- Register and OAuth workspace provisioning call `ensureDefaultPlans()` (idempotent FREE/PRO/BUSINESS upsert). Missing catalog rows no longer block the first signup.
+- Catalog seed (plans + system templates only) is still safe: `npx prisma db seed` with `NODE_ENV=production` **always** upserts plans and **skips** demo users.
 
 ---
 

@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { uniqueOrgSlug } from "@/lib/slug";
+import { ensureDefaultPlans } from "@/lib/ensure-default-plans";
 
 /** Google (or any OAuth) users get a workspace if credentials signup did not create one. */
 export async function ensureWorkspace() {
@@ -12,8 +13,7 @@ export async function ensureWorkspace() {
   });
   if (existing) return existing;
 
-  const free = await prisma.plan.findUnique({ where: { tier: "FREE" } });
-  if (!free) return null;
+  const { free } = await ensureDefaultPlans();
 
   const name = session.user.name || session.user.email?.split("@")[0] || "Workspace";
   const organization = await prisma.organization.create({

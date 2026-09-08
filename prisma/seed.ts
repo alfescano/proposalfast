@@ -1,45 +1,17 @@
-import { PrismaClient, PlanTier } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
-import { PLAN_CATALOG, stripePriceEnvFor } from "../src/lib/plans";
+import { ensureDefaultPlans } from "../src/lib/ensure-default-plans";
 import { SYSTEM_TEMPLATES } from "../src/lib/templates/catalog";
 import { shouldSeedSampleData } from "../src/lib/seed-policy";
 
 const prisma = new PrismaClient();
 
 async function seedPlans() {
-  for (const plan of Object.values(PLAN_CATALOG)) {
-    await prisma.plan.upsert({
-      where: { tier: plan.tier },
-      create: {
-        tier: plan.tier,
-        name: plan.name,
-        description: plan.description,
-        monthlyPriceCents: plan.monthlyPriceCents,
-        yearlyPriceCents: plan.yearlyPriceCents,
-        stripePriceIdMonthly: stripePriceEnvFor(plan.tier, "month"),
-        stripePriceIdYearly: stripePriceEnvFor(plan.tier, "year"),
-        maxProposals: plan.limits.maxProposals,
-        maxClients: plan.limits.maxClients,
-        maxMembers: plan.limits.maxMembers,
-        maxAiGenerationsPerMonth: plan.limits.maxAiGenerationsPerMonth,
-        features: plan.features,
-      },
-      update: {
-        name: plan.name,
-        description: plan.description,
-        monthlyPriceCents: plan.monthlyPriceCents,
-        yearlyPriceCents: plan.yearlyPriceCents,
-        stripePriceIdMonthly: stripePriceEnvFor(plan.tier, "month"),
-        stripePriceIdYearly: stripePriceEnvFor(plan.tier, "year"),
-        maxProposals: plan.limits.maxProposals,
-        maxClients: plan.limits.maxClients,
-        maxMembers: plan.limits.maxMembers,
-        maxAiGenerationsPerMonth: plan.limits.maxAiGenerationsPerMonth,
-        features: plan.features,
-      },
-    });
-  }
+  const { plans } = await ensureDefaultPlans(prisma);
+  console.log(
+    `Seeded plan catalog: ${plans.map((plan) => plan.tier).join(", ")} (no sample users).`,
+  );
 }
 
 async function seedSystemTemplates() {
@@ -77,12 +49,12 @@ async function seedSampleData() {
       data: { platformAdmin: process.env.NODE_ENV !== "production" },
     });
     console.log("Sample user already exists:", email);
-    const freeExisting = await prisma.plan.findUnique({ where: { tier: PlanTier.FREE } });
+    const freeExisting = await prisma.plan.findUnique({ where: { tier: "FREE" } });
     if (freeExisting) await seedNonAdminMember(freeExisting.id);
     return;
   }
 
-  const free = await prisma.plan.findUnique({ where: { tier: PlanTier.FREE } });
+  const free = await prisma.plan.findUnique({ where: { tier: "FREE" } });
   if (!free) throw new Error("FREE plan missing");
 
   const passwordHash = await bcrypt.hash("DemoPassword123!", 12);
