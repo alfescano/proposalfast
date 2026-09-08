@@ -26,6 +26,9 @@ export function AuthForm({
   return (
     <form action={formAction} className="space-y-4">
       {state && !state.ok ? <ErrorState description={state.error} /> : null}
+      {state?.ok && state.message ? (
+        <p className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">{state.message}</p>
+      ) : null}
       {children}
       <Button type="submit" disabled={pending} className="h-10 w-full">
         {pending ? pendingLabel : submitLabel}
@@ -42,6 +45,7 @@ export function Field({
   autoComplete,
   required,
   minLength,
+  defaultValue,
 }: {
   name: string;
   label: string;
@@ -49,6 +53,7 @@ export function Field({
   autoComplete?: string;
   required?: boolean;
   minLength?: number;
+  defaultValue?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -58,8 +63,12 @@ export function Field({
         name={name}
         type={type}
         autoComplete={autoComplete}
+        autoCapitalize={type === "email" ? "none" : undefined}
+        autoCorrect={type === "email" ? "off" : undefined}
+        spellCheck={type === "email" ? false : undefined}
         required={required}
         minLength={minLength}
+        defaultValue={defaultValue}
       />
     </div>
   );

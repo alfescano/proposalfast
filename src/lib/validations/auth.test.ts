@@ -9,7 +9,20 @@ describe("registerSchema", () => {
       password: "StrongPass1",
       organizationName: "Northline Studio",
     });
-    expect(parsed.email).toBe("alex@proposefast.com");
+    expect(parsed.email).toBe("alex@proposalfast.com");
+  });
+
+  it("accepts Gmail plus-aliases", () => {
+    const parsed = registerSchema.parse({
+      name: "Alfredo Escano",
+      email: "Alf.Escano+pf-smoke@gmail.com",
+      password: "StrongPass1",
+      organizationName: "ProposalFast",
+    });
+    expect(parsed.email).toBe("alf.escano+pf-smoke@gmail.com");
+    expect(loginSchema.parse({ email: "alf.escano+pf-smoke@gmail.com", password: "x" }).email).toBe(
+      "alf.escano+pf-smoke@gmail.com",
+    );
   });
 
   it("rejects a short or weak password", () => {

@@ -1,13 +1,19 @@
 import type { EmailAdapter } from "./adapter";
 import { ConsoleEmailAdapter } from "./console";
+import { isProductionEmailRuntime, parseResendFromEmail } from "./from";
 import { ResendEmailAdapter } from "./resend";
 import * as templates from "./templates";
 
 export function getEmailAdapter(): EmailAdapter {
-  if (process.env.RESEND_API_KEY) {
-    return new ResendEmailAdapter();
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (apiKey) {
+    const from = parseResendFromEmail(process.env.RESEND_FROM_EMAIL);
+    if (!from.ok) {
+      throw new Error(from.error);
+    }
+    return new ResendEmailAdapter(apiKey, from.from);
   }
-  if (process.env.NODE_ENV === "production") {
+  if (isProductionEmailRuntime()) {
     throw new Error("RESEND_API_KEY is required in production.");
   }
   return new ConsoleEmailAdapter();

@@ -19,7 +19,7 @@ export function ForgotForm({
       {state && !state.ok ? <ErrorState description={state.error} /> : null}
       {state?.ok ? (
         <p className="rounded-lg bg-muted px-3 py-2 text-sm">
-          If that inbox is registered, a reset link is on its way.
+          {state.message ?? "If that inbox is registered, a reset link is on its way."}
         </p>
       ) : null}
       <Field name="email" label="Email" type="email" required />

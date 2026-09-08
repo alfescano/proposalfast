@@ -43,8 +43,9 @@ export default function RegisterPage() {
             minLength={10}
           />
           <p className="text-xs text-muted-foreground">
-            10+ characters with upper, lower, and a number. We will send a verification email via
-            Resend (or the local console adapter).
+            10+ characters with upper, lower, and a number. Plus-aliases (you+tag@gmail.com) are
+            valid. We send a verification email via Resend — if that fails, the form will show the
+            reason so you can fix RESEND_FROM_EMAIL or resend from log in.
           </p>
         </AuthForm>
       </div>

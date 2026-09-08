@@ -118,6 +118,19 @@ describe("email and storage fail closed", () => {
     expect(() => getEmailAdapter()).toThrow(/RESEND_API_KEY is required in production/);
   });
 
+  it("getEmailAdapter throws on Vercel production without Resend", () => {
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(() => getEmailAdapter()).toThrow(/RESEND_API_KEY is required in production/);
+  });
+
+  it("getEmailAdapter throws when the key is set but FROM is invalid", () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test_key");
+    vi.stubEnv("RESEND_FROM_EMAIL", "ProposalFast");
+    expect(() => getEmailAdapter()).toThrow(/RESEND_FROM_EMAIL/);
+  });
+
   it("S3 adapter throws without bucket credentials", () => {
     const bucket = process.env.S3_BUCKET;
     const key = process.env.S3_ACCESS_KEY_ID;

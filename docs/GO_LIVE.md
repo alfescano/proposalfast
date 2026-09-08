@@ -152,7 +152,7 @@ Then:
 | Name | Where to create the value |
 | --- | --- |
 | `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys |
-| `RESEND_FROM_EMAIL` | After the domain is authenticated, e.g. `ProposalFast <noreply@proposefast.com>` |
+| `RESEND_FROM_EMAIL` | After the domain is authenticated: `ProposalFast <noreply@proposefast.com>` or `noreply@proposefast.com`. Bare names without an address fail. Plus-aliases in the recipient (`you+tag@gmail.com`) are valid. |
 
 ### Required to charge (subscriptions + proposal Checkout)
 

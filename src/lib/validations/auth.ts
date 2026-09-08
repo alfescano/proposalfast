@@ -1,9 +1,21 @@
 import { z } from "zod";
 
+/** HTML5 email (includes `+` aliases such as name+tag@gmail.com). */
+const HTML5_EMAIL =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+export const emailSchema = z
+  .string()
+  .trim()
+  .min(3, "Enter a valid email")
+  .max(254, "Enter a valid email")
+  .regex(HTML5_EMAIL, "Enter a valid email")
+  .transform((value) => value.toLowerCase());
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
-    email: z.string().trim().email("Enter a valid email").max(254).toLowerCase(),
+    email: emailSchema,
     password: z
       .string()
       .min(10, "Password must be at least 10 characters")
@@ -20,13 +32,13 @@ export const registerSchema = z
   .strict();
 
 export const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email").toLowerCase(),
+  email: emailSchema,
   password: z.string().min(1, "Password is required"),
 });
 
 export const forgotPasswordSchema = z
   .object({
-    email: z.string().trim().email("Enter a valid email").toLowerCase(),
+    email: emailSchema,
   })
   .strict();
 
@@ -46,7 +58,7 @@ export const resetPasswordSchema = z
 export const verifyEmailSchema = z
   .object({
     token: z.string().min(8),
-    email: z.string().trim().email().toLowerCase(),
+    email: emailSchema,
   })
   .strict();
 

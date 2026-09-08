@@ -1,5 +1,16 @@
 import { Resend } from "resend";
 import type { EmailAdapter, EmailMessage } from "./adapter";
+import { parseResendFromEmail } from "./from";
+
+function resendErrorMessage(error: unknown): string {
+  if (!error) return "Resend rejected the email.";
+  if (typeof error === "string") return error;
+  if (typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return "Resend rejected the email.";
+}
 
 export class ResendEmailAdapter implements EmailAdapter {
   readonly provider = "resend";
@@ -7,14 +18,15 @@ export class ResendEmailAdapter implements EmailAdapter {
   private from: string;
 
   constructor(apiKey = process.env.RESEND_API_KEY, from = process.env.RESEND_FROM_EMAIL) {
-    if (!apiKey) {
+    if (!apiKey?.trim()) {
       throw new Error("RESEND_API_KEY is required to send email.");
     }
-    if (!from) {
-      throw new Error("RESEND_FROM_EMAIL is required to send email.");
+    const parsed = parseResendFromEmail(from);
+    if (!parsed.ok) {
+      throw new Error(parsed.error);
     }
-    this.client = new Resend(apiKey);
-    this.from = from;
+    this.client = new Resend(apiKey.trim());
+    this.from = parsed.from;
   }
 
   async send(message: EmailMessage) {
@@ -29,7 +41,7 @@ export class ResendEmailAdapter implements EmailAdapter {
     });
 
     if (error || !data) {
-      throw new Error(error?.message ?? "Resend rejected the email.");
+      throw new Error(resendErrorMessage(error));
     }
 
     return { id: data.id };

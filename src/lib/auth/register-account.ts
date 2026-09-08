@@ -52,17 +52,34 @@ export async function registerAccount(input: {
 
   const exists = await prisma.user.findUnique({ where: { email: parsed.data.email } });
   if (exists) {
-    return { ok: false as const, error: "An account with that email already exists." };
+    return {
+      ok: false as const,
+      code: "EMAIL_TAKEN" as const,
+      error: "An account with that email already exists.",
+    };
   }
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  const user = await prisma.user.create({
-    data: {
-      email: parsed.data.email,
-      name: parsed.data.name,
-      passwordHash,
-    },
-  });
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        email: parsed.data.email,
+        name: parsed.data.name,
+        passwordHash,
+      },
+    });
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "P2002") {
+      return {
+        ok: false as const,
+        code: "EMAIL_TAKEN" as const,
+        error: "An account with that email already exists.",
+      };
+    }
+    throw error;
+  }
 
   const organization = await provisionWorkspace({
     userId: user.id,
