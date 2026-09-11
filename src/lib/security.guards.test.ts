@@ -70,6 +70,14 @@ describe("Stripe refuses unsigned or unconfigured events", () => {
     if (previous !== undefined) process.env.STRIPE_SECRET_KEY = previous;
   });
 
+  it("getStripe uses STRIPE_SECRET_KEY present at call time", () => {
+    const previous = process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_SECRET_KEY = "sk_test_runtime_lookup";
+    expect(() => getStripe()).not.toThrow();
+    if (previous === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = previous;
+  });
+
   it("constructWebhookEvent throws without STRIPE_WEBHOOK_SECRET", () => {
     const previous = process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_WEBHOOK_SECRET;
