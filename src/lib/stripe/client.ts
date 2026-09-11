@@ -4,7 +4,7 @@ import { stripePriceEnvFor } from "@/lib/plans";
 import { absoluteUrl } from "@/lib/site";
 
 export function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
+  const key = process.env["STRIPE_SECRET_KEY"];
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY is not set. Refusing to mock a payment.");
   }
@@ -100,7 +100,7 @@ export async function createProposalPaymentCheckout(input: {
 }
 
 export function constructWebhookEvent(rawBody: string, signature: string) {
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const secret = process.env["STRIPE_WEBHOOK_SECRET"];
   if (!secret) {
     throw new Error("STRIPE_WEBHOOK_SECRET is not set. Refusing unverified events.");
   }
