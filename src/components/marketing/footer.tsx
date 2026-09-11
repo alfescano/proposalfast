@@ -57,7 +57,12 @@ export function MarketingFooter() {
       <div className="border-t border-white/10">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-6 text-xs text-white/50 sm:flex-row sm:justify-between sm:px-6">
           <p>© {new Date().getFullYear()} ProposalFast. All rights reserved.</p>
-          <p>{siteConfig.domain}</p>
+          <p className="flex flex-col gap-1 sm:items-end">
+            <a href={`mailto:${siteConfig.supportEmail}`} className="hover:text-white">
+              {siteConfig.supportEmail}
+            </a>
+            <span>{siteConfig.domain}</span>
+          </p>
         </div>
       </div>
     </footer>
