@@ -14,9 +14,11 @@ export default function ContactPage() {
         <p className="text-xs tracking-[0.2em] text-accent uppercase">Contact</p>
         <h1 className="mt-3 font-heading text-5xl">Write to us with a real question</h1>
         <p className="mt-4 text-lg text-muted-foreground">
-          Billing, security reviews, and workspace issues go to {siteConfig.email}. This form uses
-          the Resend adapter — in local development it logs to the server console if no API key is
-          set.
+          Billing, security reviews, and workspace issues go to{" "}
+          <a href={`mailto:${siteConfig.supportEmail}`} className="text-foreground underline">
+            {siteConfig.supportEmail}
+          </a>
+          . You can also use the form.
         </p>
       </div>
       <ContactForm />
