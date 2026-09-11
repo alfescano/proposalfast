@@ -116,7 +116,7 @@ The app **does not** flip a plan because a button was clicked. Stripe webhooks w
 
 ## Resend
 
-Authenticate `proposefast.com` (or your sending domain) and set `RESEND_FROM_EMAIL`. The `EmailAdapter` interface is the swap point if you change providers.
+Authenticate your sending domain (currently `proposefast.com`, or whichever domain is verified in Resend) and set `RESEND_FROM_EMAIL`. Do not change Namecheap Private Email MX for `support@proposalfast.ai`. The `EmailAdapter` interface is the swap point if you change providers.
 
 ## S3 / R2
 
@@ -135,8 +135,8 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 1. Create a Vercel project from this repo (Framework Preset: Next.js).
 2. Create a Neon (or other Postgres 16) project. Copy the pooled connection string into Vercel as `DATABASE_URL` for Production and Preview.
 3. Copy every key from `.env.example` into Vercel env. Production values that must match the live host:
-   - `AUTH_URL=https://proposefast.com`
-   - `NEXT_PUBLIC_APP_URL=https://proposefast.com`
+   - `AUTH_URL=https://proposalfast.ai`
+   - `NEXT_PUBLIC_APP_URL=https://proposalfast.ai`
    - `RESEND_FROM_EMAIL` on an authenticated sending domain
    - Stripe price IDs + `STRIPE_WEBHOOK_SECRET` from the live endpoint
    - Optional `PLATFORM_ADMIN_EMAILS` (comma-separated) for `/admin`
@@ -149,14 +149,15 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
    `npm run build` already runs `prisma generate && next build`. **Always run `prisma migrate deploy` in production** — never `prisma migrate dev` against Neon.
 5. After the first successful deploy, run `npx prisma db seed` once (plans + system templates). Leave `SEED_SAMPLE_DATA` unset/false in production.
 6. **Domain / DNS for ProposalFast**
-   - Add `proposefast.com` (and `www`) in Vercel → Domains.
-   - At Namecheap **Advanced DNS** (keep PremiumDNS, or switch to Vercel nameservers if you prefer): typical records are **A** `@` → `76.76.21.21` and **CNAME** `www` → `cname.vercel-dns.com`. Final values must match the Vercel Domains panel for this project.
-   - Wait for HTTPS to issue, then confirm `AUTH_URL` / `NEXT_PUBLIC_APP_URL` use `https://proposefast.com`.
+   - Canonical public host is `proposalfast.ai`. Add it (and `www`) in Vercel → Domains.
+   - 301 `proposefast.com` / `www.proposefast.com` → `https://proposalfast.ai` (Vercel domain redirect is preferred; `next.config.ts` also 301s those hosts).
+   - Keep Namecheap **Private Email** MX/TXT for `support@proposalfast.ai`. Do not switch nameservers if that would drop inbound mail.
+   - Wait for HTTPS to issue, then confirm `AUTH_URL` / `NEXT_PUBLIC_APP_URL` use `https://proposalfast.ai`.
 7. **Stripe webhook**
-   - Endpoint URL: `https://proposefast.com/api/webhooks/stripe`
+   - Endpoint URL: `https://proposalfast.ai/api/webhooks/stripe`
    - Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
    - Paste the signing secret into `STRIPE_WEBHOOK_SECRET`.
-8. Inngest: sync `https://proposefast.com/api/inngest`.
+8. Inngest: sync `https://proposalfast.ai/api/inngest`.
 9. Platform admin: set `User.platformAdmin` in the database or list emails in `PLATFORM_ADMIN_EMAILS`. Org **Admin** cannot open `/admin`.
 
 ## Scripts

@@ -167,7 +167,7 @@ Inngest `proposal/follow-up` sends only when **both** the workspace (`Settings.f
 4. `npx prisma db seed` (plans + system templates; sample data stays off in production unless `SEED_SAMPLE_DATA=true`)
 5. Stripe webhook URL: `https://<host>/api/webhooks/stripe` (`checkout.session.completed`, `customer.subscription.*`, `invoice.payment_failed`)
 6. Inngest app pointing at `/api/inngest`
-7. Domain: `proposefast.com`. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposefast.com`.
+7. Domain: `proposalfast.ai`. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposalfast.ai`. 301 `proposefast.com` to the canonical host.
 8. Optional `PLATFORM_ADMIN_EMAILS` for the `/admin` console.
 
 Production migrate is `npx prisma migrate deploy` (never `migrate dev` against Neon). See the README for DNS and Vercel build command details.

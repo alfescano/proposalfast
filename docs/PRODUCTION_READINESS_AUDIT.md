@@ -131,7 +131,7 @@ Do **not** paste secret keys into chat. Create them in each vendor dashboard and
 
 1. Buy/point the apex (and optional `www`) to the Vercel project.
 2. Issue HTTPS.
-3. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposefast.com` (or the live host).
+3. Set `AUTH_URL` and `NEXT_PUBLIC_APP_URL` to `https://proposalfast.ai` (or the live host).
 4. Generate `AUTH_SECRET` with `openssl rand -base64 32` and store it only in the host.
 
 ### Vercel (or other Node host)

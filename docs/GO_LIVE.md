@@ -1,10 +1,10 @@
-# Go live — ProposalFast (`proposefast.com`)
+# Go live — ProposalFast (`proposalfast.ai`)
 
-Product name stays **ProposalFast**. The production hostname is **`proposefast.com`** (not `proposalfast.com`).
+Product name stays **ProposalFast**. The public canonical hostname is **`proposalfast.ai`**. Keep **`proposefast.com`** attached and **301** it to `https://proposalfast.ai` (Vercel domain redirect preferred; `next.config.ts` also redirects those hosts). Do not change Namecheap Private Email MX for `support@proposalfast.ai`.
 
 This is the click-path to put the Origin repo on Vercel and attach the domain. **Secrets stay in dashboards.** Do not paste API keys into chat or commit them.
 
-As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment is **logged out** (no `VERCEL_TOKEN`). Do not treat the site as live until `https://proposefast.com` serves this app over HTTPS.
+As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment is **logged out** (no `VERCEL_TOKEN`). Do not treat the site as live until `https://proposalfast.ai` serves this app over HTTPS.
 
 ---
 
@@ -16,7 +16,7 @@ As of 2026-09-07 this agent **could not deploy**: Vercel CLI in this environment
 **Official clone URL:** `https://origin.cursor.com/alfredo-escano/proposalfast.git`  
 **Alternate git remote:** `https://origin.cursor.com/git/alfredo-escano/proposalfast.git`
 
-The product name **ProposalFast** and the hostname **`proposefast.com`** are not the git slug. In Vercel **Add New… → Project → Continue with Origin**, search **`proposalfast`**. Do not search `ProposalFast` or `proposefast.com`.
+The product name **ProposalFast** and the hostnames **`proposalfast.ai`** / **`proposefast.com`** are not the git slug. In Vercel **Add New… → Project → Continue with Origin**, search **`proposalfast`**. Do not search `ProposalFast` or `proposefast.com`.
 
 This Cloud Agent workspace still tracks a separate tmp remote (`alfredo-escano/tmp-560debf81f44db87`). That tmp slug does **not** appear in `origin repo list` and is not the Vercel import target.
 
@@ -59,7 +59,7 @@ origin repo list --namespace alfredo-escano
 
 If the tmp clone is denied, clone the empty named repo and copy this tree in, or open a **Desktop / local** Cursor agent (not Cloud) that has your Origin login and ask it to push `main`.
 
-Then in Vercel search **`proposalfast`**. Domain stays **`proposefast.com`**. Do not invent a GitHub URL.
+Then in Vercel search **`proposalfast`**. Canonical domain is **`proposalfast.ai`**. Do not invent a GitHub URL.
 
 ---
 
@@ -106,31 +106,32 @@ There is no GitHub import URL for this project (`githubNodeId` is null). `origin
 
 ---
 
-## 2. Namecheap Advanced DNS for `proposefast.com`
+## 2. Namecheap Advanced DNS for `proposalfast.ai`
 
 Point DNS at Vercel **after** the Vercel project exists and the domain is added under **Settings → Domains**.
 
 **Nameservers (pick one):**
 
-- **Keep Namecheap PremiumDNS** (recommended if you already use it) and edit records under **Domain List → proposefast.com → Advanced DNS**.
-- **Or** switch to the **Vercel nameservers** shown on that project’s Domains page (then Vercel manages records). Do not mix both approaches.
+- **Keep Namecheap PremiumDNS / Advanced DNS** (recommended). **Do not switch to Vercel nameservers** if Namecheap Private Email is on `proposalfast.ai` — changing nameservers can drop MX and break `support@proposalfast.ai`.
+- Edit web records only: **Domain List → proposalfast.ai → Advanced DNS**. Leave existing Private Email MX/TXT alone.
 
-**Typical records if you stay on PremiumDNS / Advanced DNS:**
+**Typical web records if you stay on PremiumDNS / Advanced DNS:**
 
 | Type | Host | Value | TTL |
 | --- | --- | --- | --- |
 | A | `@` | `76.76.21.21` | Automatic / 30 min |
 | CNAME | `www` | `cname.vercel-dns.com.` | Automatic / 30 min |
 
-Also add any **Resend** SPF/DKIM (and optional DMARC) TXT records on the same Advanced DNS screen.
+Also add any **Resend** SPF/DKIM (and optional DMARC) TXT records on the **sending** domain (still `proposefast.com` unless you verify a new one). Do not invent new email secrets.
 
 **Important:** The A/CNAME values above are Vercel’s usual defaults. The **final** host and value **must match the Vercel Domains panel for this project**. If Vercel shows a different A record or a unique CNAME, use those instead of this table.
 
 Then:
 
-1. Vercel → **Settings → Domains → Add** `proposefast.com` and `www.proposefast.com`.
-2. Namecheap → remove leftover parking/URL-redirect records that conflict with the A/`www` CNAME.
-3. Wait for DNS. Confirm **HTTPS**: `https://proposefast.com` shows ProposalFast.
+1. Vercel → **Settings → Domains → Add** `proposalfast.ai` and `www.proposalfast.ai` as the production hosts.
+2. Keep `proposefast.com` / `www.proposefast.com` attached and set a **Vercel domain redirect** (301) to `https://proposalfast.ai`. `next.config.ts` also 301s those hosts if both domains hit this app.
+3. Namecheap → remove leftover parking/URL-redirect records that conflict with the A/`www` CNAME. Do not remove Private Email MX.
+4. Wait for DNS. Confirm **HTTPS**: `https://proposalfast.ai` shows ProposalFast.
 
 ---
 
@@ -144,8 +145,8 @@ Then:
 | --- | --- |
 | `DATABASE_URL` | Neon (or other Postgres) → connection string (pooled is fine for Prisma on Vercel) |
 | `AUTH_SECRET` | Generate locally: `openssl rand -base64 32` → paste only in Vercel |
-| `AUTH_URL` | Set to `https://proposefast.com` (no trailing slash) |
-| `NEXT_PUBLIC_APP_URL` | Same: `https://proposefast.com` |
+| `AUTH_URL` | Set to `https://proposalfast.ai` (no trailing slash) |
+| `NEXT_PUBLIC_APP_URL` | Same: `https://proposalfast.ai` |
 
 ### Required to send email in production
 
@@ -213,7 +214,7 @@ Then:
 
 In Stripe Dashboard → **Developers → Webhooks → Add endpoint**:
 
-- **URL:** `https://proposefast.com/api/webhooks/stripe`
+- **URL:** `https://proposalfast.ai/api/webhooks/stripe`
 - **Events:** `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - Copy the endpoint **signing secret** into Vercel as `STRIPE_WEBHOOK_SECRET` (Production).
 - Redeploy after adding it so the new value is present.
@@ -263,9 +264,9 @@ Do not rely on the local demo `platformAdmin` flag — it is not created in prod
 
 ## 8. Post-deploy smoke checklist
 
-Run these on `https://proposefast.com` only after HTTPS works:
+Run these on `https://proposalfast.ai` only after HTTPS works:
 
-- [ ] `https://proposefast.com/api/health` → `{"ok":true,"service":"proposalfast"}`
+- [ ] `https://proposalfast.ai/api/health` → `{"ok":true,"service":"proposalfast"}`
 - [ ] Marketing home, `/pricing`, `/login`, `/register` load over HTTPS
 - [ ] `/dashboard` and `/settings` while logged out redirect to `/login`
 - [ ] Register → verification email arrives (Resend) → login → logout → login
@@ -276,7 +277,8 @@ Run these on `https://proposefast.com` only after HTTPS works:
 - [ ] `/admin` 404 for a normal user; loads for `PLATFORM_ADMIN_EMAILS`
 - [ ] Stripe: test Checkout (test mode first) → webhook updates `Subscription`
 - [ ] If OpenAI is set: generate from a brief; missing fees stay `[PLACEHOLDER]`
-- [ ] `https://proposefast.com` is **this** app (ProposalFast), not a registrar parking page
+- [ ] `https://proposalfast.ai` is **this** app (ProposalFast), not a registrar parking page
+- [ ] `https://proposefast.com` **301**s to `https://proposalfast.ai`
 
 ---
 
@@ -287,7 +289,7 @@ Run these on `https://proposefast.com` only after HTTPS works:
 | `npm run build:production` + `vercel.json` | Push `main` to `proposalfast` from a full Origin login (section 0.1), then **Continue with Origin** on a Pro team and search `proposalfast` |
 | Sample seed hard-blocked in production | Create Neon DB and set `DATABASE_URL` |
 | Go-live click-path documented | Generate `AUTH_SECRET`; set `AUTH_URL` / `NEXT_PUBLIC_APP_URL` |
-| Code pushed to Origin `main` | Namecheap Advanced DNS → Vercel; attach `proposefast.com` |
+| Code pushed to Origin `main` | Namecheap Advanced DNS → Vercel; attach `proposalfast.ai`; 301 `proposefast.com` |
 | | Resend domain + API key |
 | | Stripe prices + webhook |
 | | `PLATFORM_ADMIN_EMAILS` |
