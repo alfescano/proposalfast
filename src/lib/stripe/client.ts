@@ -3,8 +3,14 @@ import { PlanTier } from "@prisma/client";
 import { stripePriceEnvFor } from "@/lib/plans";
 import { absoluteUrl } from "@/lib/site";
 
+/** Avoid Next.js build-time inlining of Sensitive Vercel secrets. */
+function runtimeEnv(name: string) {
+  const env = process.env as Record<string, string | undefined>;
+  return env[name];
+}
+
 export function getStripe() {
-  const key = process.env["STRIPE_SECRET_KEY"];
+  const key = runtimeEnv("STRIPE_SECRET_KEY");
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY is not set. Refusing to mock a payment.");
   }
@@ -50,7 +56,7 @@ export async function createSubscriptionCheckout(input: {
 }
 
 function trialDays() {
-  const raw = process.env.STRIPE_TRIAL_DAYS;
+  const raw = runtimeEnv("STRIPE_TRIAL_DAYS");
   if (!raw) return undefined;
   const days = Number(raw);
   if (!Number.isFinite(days) || days <= 0) return undefined;
@@ -100,7 +106,7 @@ export async function createProposalPaymentCheckout(input: {
 }
 
 export function constructWebhookEvent(rawBody: string, signature: string) {
-  const secret = process.env["STRIPE_WEBHOOK_SECRET"];
+  const secret = runtimeEnv("STRIPE_WEBHOOK_SECRET");
   if (!secret) {
     throw new Error("STRIPE_WEBHOOK_SECRET is not set. Refusing unverified events.");
   }
