@@ -29,6 +29,24 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
   },
+  // Fallback 301 if both hosts hit this app. Prefer a Vercel domain redirect
+  // from proposefast.com → https://proposalfast.ai so the hop happens at the edge.
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host" as const, value: "proposefast.com" }],
+        destination: "https://proposalfast.ai/:path*",
+        permanent: true,
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host" as const, value: "www.proposefast.com" }],
+        destination: "https://proposalfast.ai/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
