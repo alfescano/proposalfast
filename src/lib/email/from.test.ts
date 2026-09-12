@@ -4,6 +4,14 @@ import { authJsErrorFromUrl, isNextRedirectError, messageForAuthJsError } from "
 
 describe("parseResendFromEmail", () => {
   it("accepts a bare address and a display-name address", () => {
+    expect(parseResendFromEmail("noreply@proposalfast.ai")).toEqual({
+      ok: true,
+      from: "noreply@proposalfast.ai",
+    });
+    expect(parseResendFromEmail("ProposalFast <noreply@proposalfast.ai>")).toEqual({
+      ok: true,
+      from: "ProposalFast <noreply@proposalfast.ai>",
+    });
     expect(parseResendFromEmail("noreply@proposefast.com")).toEqual({
       ok: true,
       from: "noreply@proposefast.com",

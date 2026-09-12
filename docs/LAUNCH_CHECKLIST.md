@@ -35,7 +35,7 @@ These surfaces refuse to pretend they work without credentials:
 
 1. **`DATABASE_URL`** — Neon/Postgres. Run `npx prisma migrate deploy` (not `migrate dev`).
 2. **`AUTH_SECRET`**, **`AUTH_URL`**, **`NEXT_PUBLIC_APP_URL`** — `https://proposalfast.ai`.
-3. **`RESEND_API_KEY`**, **`RESEND_FROM_EMAIL`** — authenticated sending domain. Production throws without Resend.
+3. **`RESEND_API_KEY`**, **`RESEND_FROM_EMAIL`** — authenticated sending domain (e.g. `ProposalFast <noreply@proposalfast.ai>`). Canonical brand domain is `proposalfast.ai`; `proposefast.com` remains valid if still verified. Production throws without Resend.
 4. **`OPENAI_API_KEY`** — generation and rewrite.
 5. **Stripe** — `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, publishable key, Pro/Business price IDs. Webhook URL: `https://proposalfast.ai/api/webhooks/stripe`.
 6. **S3/R2** — logos, PDFs, drawn signatures if stored.
