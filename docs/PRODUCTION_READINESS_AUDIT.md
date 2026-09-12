@@ -150,7 +150,7 @@ Do **not** paste secret keys into chat. Create them in each vendor dashboard and
 
 1. Create a Stripe account (test first, then live).
 2. Create Products/Prices for Pro and Business, monthly and yearly.
-3. Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_BUSINESS_MONTHLY`, `STRIPE_PRICE_BUSINESS_YEARLY`.
+3. Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO_MONTHLY`, `STRIPE_PRICE_PRO_YEARLY`, `STRIPE_PRICE_BUSINESS_MONTHLY`, `STRIPE_PRICE_BUSINESS_YEARLY`. While Founding Pro is advertised, also set `STRIPE_PRICE_FOUNDING_PRO_MONTHLY` to a real $29/month Price id.
 4. Optional: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (browser only; never the secret).
 5. Add a webhook endpoint `https://<host>/api/webhooks/stripe` for `checkout.session.completed`, `customer.subscription.*`, `invoice.payment_failed`.
 6. Set `STRIPE_WEBHOOK_SECRET` from that endpoint. Subscriptions update **only** from this verified webhook.

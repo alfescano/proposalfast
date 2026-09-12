@@ -108,6 +108,13 @@ export default function TermsPage() {
         the refund policy for how we handle duplicate or erroneous charges.
       </p>
       <p>
+        Promotional or founding prices, when offered, apply only to new Checkout sessions while
+        that offer is open (for Founding Pro: through September 30, 2026, 11:59 p.m. Pacific, or
+        the first 50 paid Pro workspaces, whichever comes first). They do not change an existing
+        subscription’s Stripe price unless you change plans in the customer portal. Founding and
+        regular paid plans follow the same cancellation and refund rules.
+      </p>
+      <p>
         When your client pays a proposal, that charge is your transaction with that client — not a
         ProposalFast subscription fee. Stripe processes the payment. ProposalFast is not a bank,
         escrow, or custodian of those funds and is not the seller of your professional services.

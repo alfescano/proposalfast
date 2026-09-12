@@ -3,6 +3,7 @@ import { Check, FileText, PenLine, Signature, Wallet } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site";
+import { FOUNDING_PRO_MONTHLY_CENTS, isFoundingWindowOpen } from "@/lib/founding-offer";
 import { PLAN_CATALOG, formatPrice } from "@/lib/plans";
 import { ProductDemo } from "@/components/marketing/product-demo";
 
@@ -103,8 +104,20 @@ export default function HomePage() {
             <h2 className="font-heading text-4xl">Start on Free. Upgrade when the work does.</h2>
             <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
               {PLAN_CATALOG.FREE.name} includes {PLAN_CATALOG.FREE.limits.maxProposals} proposals.
-              Pro is {formatPrice(PLAN_CATALOG.PRO.monthlyPriceCents)} / month. Stripe is the source
-              of truth after you subscribe.
+              {isFoundingWindowOpen() ? (
+                <>
+                  {" "}
+                  Founding Pro is {formatPrice(FOUNDING_PRO_MONTHLY_CENTS)}/month through September
+                  30, 2026, or the first 50 Pro workspaces — whichever comes first. Regular Pro is{" "}
+                  {formatPrice(PLAN_CATALOG.PRO.monthlyPriceCents)}/month after that.
+                </>
+              ) : (
+                <>
+                  {" "}
+                  Pro is {formatPrice(PLAN_CATALOG.PRO.monthlyPriceCents)} / month.
+                </>
+              )}{" "}
+              Stripe is the source of truth after you subscribe.
             </p>
           </div>
           <Link href="/pricing" className={cn(buttonVariants({ size: "lg" }), "h-11 bg-accent px-5 text-accent-foreground hover:bg-accent/90")}>

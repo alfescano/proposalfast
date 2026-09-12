@@ -161,10 +161,11 @@ Then:
 | --- | --- |
 | `STRIPE_SECRET_KEY` | Stripe Developers → API keys (secret) |
 | `STRIPE_WEBHOOK_SECRET` | Stripe Developers → Webhooks → signing secret for the endpoint below |
-| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Product price id |
+| `STRIPE_PRICE_PRO_MONTHLY` | Stripe Product price id ($49 Pro monthly; existing record `price_1UEK4K05EDRKjSG1p7OWwW4M`) |
 | `STRIPE_PRICE_PRO_YEARLY` | Stripe Product price id |
 | `STRIPE_PRICE_BUSINESS_MONTHLY` | Stripe Product price id |
 | `STRIPE_PRICE_BUSINESS_YEARLY` | Stripe Product price id |
+| `STRIPE_PRICE_FOUNDING_PRO_MONTHLY` | New $29/month Price on the Pro product (create in Dashboard; required while Founding is advertised) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key (browser-safe) |
 
 ### Required only if you sell AI drafts

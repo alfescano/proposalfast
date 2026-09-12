@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireOrg } from "@/lib/org";
+import { getFoundingOfferStateSafe } from "@/lib/founding-offer-server";
 import { PLAN_CATALOG, formatLimit } from "@/lib/plans";
 import { SettingsForm } from "@/components/app/settings-form";
 import { BillingPanel } from "@/components/app/billing-panel";
@@ -20,7 +21,7 @@ export default async function SettingsPage() {
   const manageSettings = canManageSettings(ctx.role);
   const manageTeam = canManageMembers(ctx.role);
 
-  const [members, invites] = await Promise.all([
+  const [members, invites, founding] = await Promise.all([
     prisma.organizationMember.findMany({
       where: { organizationId: ctx.organization.id },
       include: { user: { select: { email: true, name: true } } },
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
+    getFoundingOfferStateSafe(),
   ]);
 
   return (
@@ -59,6 +61,7 @@ export default async function SettingsPage() {
           status={ctx.organization.subscription?.status ?? "ACTIVE"}
           canBill={canManageBilling(ctx.role)}
           hasCustomer={Boolean(ctx.organization.subscription?.stripeCustomerId)}
+          founding={founding}
         />
       ) : null}
       {manageSettings ? (

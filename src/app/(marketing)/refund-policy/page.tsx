@@ -11,9 +11,10 @@ export default function RefundPolicyPage() {
   return (
     <LegalPage title="Refund policy" updated="September 12, 2026">
       <p>
-        This policy covers fees you pay ProposalFast for a subscription. Paid plans are billed by
-        Stripe. Subscription status in the app follows Stripe. You manage payment methods, invoices,
-        and cancellation in the Stripe customer portal from workspace settings.
+        This policy covers fees you pay ProposalFast for a subscription, including Founding Pro and
+        regular Pro or Business. Paid plans are billed by Stripe. Subscription status in the app
+        follows Stripe. You manage payment methods, invoices, and cancellation in the Stripe
+        customer portal from workspace settings.
       </p>
 
       <h2>Cancellation</h2>
@@ -33,8 +34,9 @@ export default function RefundPolicyPage() {
       </p>
       <p>
         We do not refund because you did not use unused AI generations, changed your mind after a
-        successful charge, or did not win a client engagement. Trials, if offered, are controlled
-        by the Stripe Checkout session at signup.
+        successful charge, or did not win a client engagement. A founding or promotional price is
+        still a subscription charge under this policy. Trials, if offered, are controlled by the
+        Stripe Checkout session at signup.
       </p>
 
       <h2>Client proposal payments</h2>

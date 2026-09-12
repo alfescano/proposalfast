@@ -56,8 +56,9 @@ openssl rand -base64 32
 | `STRIPE_SECRET_KEY` | Subscriptions + proposal Checkout |
 | `STRIPE_WEBHOOK_SECRET` | Webhook signature verify |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client Stripe.js when Checkout is wired in the UI |
-| `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY` | Pro prices |
+| `STRIPE_PRICE_PRO_MONTHLY` / `_YEARLY` | Pro prices (`price_1UEK4K05EDRKjSG1p7OWwW4M` is the existing $49 monthly Price) |
 | `STRIPE_PRICE_BUSINESS_MONTHLY` / `_YEARLY` | Business prices |
+| `STRIPE_PRICE_FOUNDING_PRO_MONTHLY` | Founding Pro $29/month Price (create in Stripe; do not invent an id) |
 | `STRIPE_TRIAL_DAYS` | Optional 1–30 day trial on new Checkout subscriptions |
 | `S3_BUCKET` `S3_ACCESS_KEY_ID` `S3_SECRET_ACCESS_KEY` | Logos, PDFs, signatures |
 | `S3_REGION` `S3_ENDPOINT` `S3_PUBLIC_URL` | `S3_ENDPOINT` for R2 |
@@ -104,9 +105,12 @@ npm run test:e2e   # Playwright home + login; skips if Chromium is not installed
 
 1. Create Products/Prices for Pro and Business (monthly + yearly).
 2. Put the price IDs in the `STRIPE_PRICE_*` vars.
-3. Webhook endpoint: `https://<host>/api/webhooks/stripe`
-4. Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
-5. Customer Portal is created via `createCustomerPortalSession` when `stripeCustomerId` exists.
+3. **Founding Pro (launch):** on the existing Pro product, add a second recurring monthly Price of **$29 USD**. Copy its `price_…` id into `STRIPE_PRICE_FOUNDING_PRO_MONTHLY` on Vercel. Do not reuse or invent `price_1UEK4K05EDRKjSG1p7OWwW4M` ($49). Leave the $49 Price as regular Pro.
+4. Webhook endpoint: `https://<host>/api/webhooks/stripe`
+5. Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+6. Customer Portal is created via `createCustomerPortalSession` when `stripeCustomerId` exists.
+
+Founding Pro is the same Pro plan at $29/month until **September 30, 2026, 11:59 p.m. Pacific**, or the first **50** paid Pro workspaces (ACTIVE / TRIALING / PAST_DUE), whichever comes first. After that, monthly Pro Checkout uses `STRIPE_PRICE_PRO_MONTHLY`. While the offer is advertised, Checkout will not silently charge $49 if the founding Price env is missing.
 
 The app **does not** flip a plan because a button was clicked. Stripe webhooks write `Subscription`.
 
