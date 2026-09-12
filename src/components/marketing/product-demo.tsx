@@ -120,7 +120,7 @@ export function ProductDemo() {
   const [hasVideo, setHasVideo] = useState(false);
 
   return (
-    <section id="demo" className="border-border bg-card border-t">
+    <section id="demo" className="border-border bg-card scroll-mt-24 border-t">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
         <p className="text-accent text-xs tracking-[0.22em] uppercase">
           See it in action
