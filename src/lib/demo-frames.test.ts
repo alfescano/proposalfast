@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEMO_FRAMES, DEMO_POSTER_SRC, DEMO_VIDEO_SRC } from "./demo-frames";
+import {
+  DEMO_FRAMES,
+  DEMO_POSTER_SRC,
+  DEMO_YOUTUBE_EMBED_URL,
+  DEMO_YOUTUBE_ID,
+  DEMO_YOUTUBE_WATCH_URL,
+} from "./demo-frames";
 
 describe("demo frames", () => {
   it("lists the six labeled walkthrough stills in order", () => {
@@ -22,8 +28,12 @@ describe("demo frames", () => {
     ]);
   });
 
-  it("points the video tag at a same-origin file with the first frame as poster", () => {
-    expect(DEMO_VIDEO_SRC).toBe("/demo.mp4");
+  it("points the embed at the privacy-friendly YouTube player", () => {
+    expect(DEMO_YOUTUBE_ID).toBe("aWZjHgRj_Yc");
+    expect(DEMO_YOUTUBE_WATCH_URL).toBe("https://www.youtube.com/watch?v=aWZjHgRj_Yc");
+    expect(DEMO_YOUTUBE_EMBED_URL).toBe(
+      "https://www.youtube-nocookie.com/embed/aWZjHgRj_Yc",
+    );
     expect(DEMO_POSTER_SRC).toBe("/demo-frames/01.png");
   });
 });

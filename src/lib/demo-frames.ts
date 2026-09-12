@@ -25,5 +25,8 @@ export const DEMO_FRAMES = [
   },
 ] as const;
 
-export const DEMO_VIDEO_SRC = "/demo.mp4";
+export const DEMO_YOUTUBE_ID = "aWZjHgRj_Yc";
+export const DEMO_YOUTUBE_WATCH_URL = `https://www.youtube.com/watch?v=${DEMO_YOUTUBE_ID}`;
+export const DEMO_YOUTUBE_EMBED_URL = `https://www.youtube-nocookie.com/embed/${DEMO_YOUTUBE_ID}`;
+export const DEMO_YOUTUBE_TITLE = "ProposalFast product demo: from brief to client portal";
 export const DEMO_POSTER_SRC = DEMO_FRAMES[0].src;

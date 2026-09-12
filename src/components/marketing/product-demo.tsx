@@ -6,8 +6,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DEMO_FRAMES,
   DEMO_POSTER_SRC,
-  DEMO_VIDEO_SRC,
+  DEMO_YOUTUBE_EMBED_URL,
+  DEMO_YOUTUBE_TITLE,
+  DEMO_YOUTUBE_WATCH_URL,
 } from "@/lib/demo-frames";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const ADVANCE_MS = 5000;
@@ -54,12 +57,11 @@ function DemoCarousel() {
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          setPaused(false);
+        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
       }}
     >
       <p id={labelId} className="sr-only">
-        Product walkthrough
+        Product stills
       </p>
       <div className="bg-[#152033]">
         <Image
@@ -75,17 +77,13 @@ function DemoCarousel() {
       <div className="flex items-center justify-between gap-3 border-t border-[#efe3cf] px-3 py-3 sm:px-4">
         <button
           type="button"
-          className="border-border bg-background text-foreground hover:bg-muted inline-flex size-9 items-center justify-center rounded-full border"
+          className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-muted"
           onClick={() => go(index - 1)}
           aria-label="Previous frame"
         >
           <ChevronLeft className="size-4" />
         </button>
-        <div
-          className="flex flex-wrap items-center justify-center gap-1.5"
-          role="tablist"
-          aria-label="Demo frames"
-        >
+        <div className="flex flex-wrap items-center justify-center gap-1.5" role="tablist" aria-label="Demo frames">
           {DEMO_FRAMES.map((item, itemIndex) => (
             <button
               key={item.src}
@@ -95,9 +93,7 @@ function DemoCarousel() {
               aria-label={item.caption}
               className={cn(
                 "size-2.5 rounded-full transition-colors",
-                itemIndex === index
-                  ? "bg-accent"
-                  : "bg-[#d7c9ae] hover:bg-[#c4b396]",
+                itemIndex === index ? "bg-accent" : "bg-[#d7c9ae] hover:bg-[#c4b396]",
               )}
               onClick={() => go(itemIndex)}
             />
@@ -105,7 +101,7 @@ function DemoCarousel() {
         </div>
         <button
           type="button"
-          className="border-border bg-background text-foreground hover:bg-muted inline-flex size-9 items-center justify-center rounded-full border"
+          className="inline-flex size-9 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-muted"
           onClick={() => go(index + 1)}
           aria-label="Next frame"
         >
@@ -116,43 +112,86 @@ function DemoCarousel() {
   );
 }
 
+function YouTubeDemo() {
+  return (
+    <figure>
+      <div className="flex items-center justify-between gap-3 border-b border-[#efe3cf] px-4 py-3 sm:px-5">
+        <figcaption className="text-[11px] tracking-[0.16em] text-[#8a7040] uppercase">
+          Product walkthrough
+        </figcaption>
+        <a
+          href={DEMO_YOUTUBE_WATCH_URL}
+          className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          rel="noreferrer"
+          target="_blank"
+        >
+          Open on YouTube
+        </a>
+      </div>
+      <div className="relative aspect-video w-full bg-[#152033]">
+        <Image
+          src={DEMO_POSTER_SRC}
+          alt=""
+          fill
+          sizes="(min-width: 1152px) 1152px, 100vw"
+          className="object-cover object-top"
+          aria-hidden
+        />
+        <iframe
+          className="absolute inset-0 h-full w-full"
+          src={DEMO_YOUTUBE_EMBED_URL}
+          title={DEMO_YOUTUBE_TITLE}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+    </figure>
+  );
+}
+
 export function ProductDemo() {
-  const [hasVideo, setHasVideo] = useState(false);
+  const [view, setView] = useState<"video" | "stills">("video");
 
   return (
-    <section id="demo" className="border-border bg-card scroll-mt-24 border-t">
+    <section id="demo" className="scroll-mt-24 border-t border-border bg-card">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
-        <p className="text-accent text-xs tracking-[0.22em] uppercase">
-          See it in action
-        </p>
-        <h2 className="font-heading mt-3 max-w-3xl text-4xl text-balance">
+        <p className="text-xs tracking-[0.22em] text-accent uppercase">See it in action</p>
+        <h2 className="mt-3 max-w-3xl font-heading text-4xl text-balance">
           From brief to client portal in minutes.
         </h2>
-        <p className="text-muted-foreground mt-3 max-w-2xl text-base leading-7">
+        <p className="mt-3 max-w-2xl text-base leading-7 text-muted-foreground">
           AI drafts from your facts. Fees stay placeholders until you fill them.
         </p>
 
-        <div className="mt-10 overflow-hidden rounded-[28px] border border-[#d7c9ae] bg-[#fffdf8] shadow-[0_24px_80px_-32px_rgba(21,32,51,0.45)]">
-          <video
+        <div className="mt-8 flex flex-wrap gap-2" role="group" aria-label="Demo view">
+          <button
+            type="button"
+            aria-pressed={view === "video"}
             className={cn(
-              "aspect-video w-full bg-[#152033] object-contain",
-              !hasVideo && "hidden",
+              buttonVariants({ variant: view === "video" ? "default" : "outline", size: "lg" }),
+              "h-10 px-4",
             )}
-            src={DEMO_VIDEO_SRC}
-            poster={DEMO_POSTER_SRC}
-            muted
-            playsInline
-            controls
-            loop
-            preload="metadata"
-            aria-label="ProposalFast walkthrough from brief to client portal"
-            onLoadedData={() => setHasVideo(true)}
-            onCanPlay={() => setHasVideo(true)}
-            onError={() => setHasVideo(false)}
+            onClick={() => setView("video")}
           >
-            Your browser does not support video.
-          </video>
-          {hasVideo ? null : <DemoCarousel />}
+            Watch demo
+          </button>
+          <button
+            type="button"
+            aria-pressed={view === "stills"}
+            className={cn(
+              buttonVariants({ variant: view === "stills" ? "default" : "outline", size: "lg" }),
+              "h-10 px-4",
+            )}
+            onClick={() => setView("stills")}
+          >
+            Browse stills
+          </button>
+        </div>
+
+        <div className="mt-6 overflow-hidden rounded-[28px] border border-[#d7c9ae] bg-[#fffdf8] shadow-[0_24px_80px_-32px_rgba(21,32,51,0.45)]">
+          {view === "video" ? <YouTubeDemo /> : <DemoCarousel />}
         </div>
       </div>
     </section>
