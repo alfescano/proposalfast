@@ -290,6 +290,7 @@ export async function registerFromInviteAction(
     email: formData.get("email"),
     password: formData.get("password"),
     organizationName: invite.organization.name,
+    acceptTerms: formData.get("acceptTerms"),
   });
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };

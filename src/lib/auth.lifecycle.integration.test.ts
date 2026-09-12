@@ -18,6 +18,7 @@ describe("auth lifecycle (register → verify → reset → change password)", (
       email,
       password: "FirstPassword1",
       organizationName: `Lifecycle Org ${suffix}`,
+      acceptTerms: true,
     });
     expect(registered.ok).toBe(true);
     if (!registered.ok) return;

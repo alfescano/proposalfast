@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="September 7, 2026">
+    <LegalPage title="Privacy policy" updated="September 12, 2026">
       <p>
         This policy describes how {siteConfig.name} (“we”) handles personal data when you use{" "}
         {siteConfig.domain}.
@@ -30,6 +30,11 @@ export default function PrivacyPage() {
       <p>
         Depending on configuration: Vercel (hosting), Neon or Supabase (Postgres), Auth.js sessions,
         Resend (email), OpenAI (generation), Stripe (payments), and S3-compatible storage for files.
+      </p>
+      <p>
+        Stripe processes subscription billing and proposal Checkout payments. When you use AI
+        drafting, the proposal content you supply (briefs, facts, client names, and draft text) is
+        sent to our AI provider (currently OpenAI) to generate outlines and drafts.
       </p>
       <h2>Retention</h2>
       <p>
