@@ -1,5 +1,7 @@
 import Stripe from "stripe";
 import { PlanTier } from "@prisma/client";
+import { getFoundingOfferState } from "@/lib/founding-offer-server";
+import { selectSubscriptionPriceId } from "@/lib/founding-offer";
 import { stripePriceEnvFor } from "@/lib/plans";
 import { absoluteUrl } from "@/lib/site";
 
@@ -25,18 +27,19 @@ export async function createSubscriptionCheckout(input: {
   interval: "month" | "year";
 }) {
   const stripe = getStripe();
-  const price = stripePriceEnvFor(input.tier, input.interval);
-  if (!price) {
-    throw new Error(
-      `Missing Stripe price id for ${input.tier} ${input.interval}. Set STRIPE_PRICE_${input.tier}_${input.interval === "month" ? "MONTHLY" : "YEARLY"}.`,
-    );
-  }
+  const founding = await getFoundingOfferState();
+  const selected = selectSubscriptionPriceId({
+    tier: input.tier,
+    interval: input.interval,
+    founding,
+    regularPriceId: stripePriceEnvFor(input.tier, input.interval),
+  });
 
   return stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.stripeCustomerId ?? undefined,
     customer_email: input.stripeCustomerId ? undefined : input.customerEmail,
-    line_items: [{ price, quantity: 1 }],
+    line_items: [{ price: selected.priceId, quantity: 1 }],
     success_url: absoluteUrl("/settings?billing=success"),
     cancel_url: absoluteUrl("/pricing?billing=canceled"),
     client_reference_id: input.organizationId,
@@ -44,12 +47,14 @@ export async function createSubscriptionCheckout(input: {
       organizationId: input.organizationId,
       tier: input.tier,
       kind: "subscription",
+      foundingOffer: selected.founding ? "true" : "false",
     },
     subscription_data: {
       trial_period_days: trialDays(),
       metadata: {
         organizationId: input.organizationId,
         tier: input.tier,
+        foundingOffer: selected.founding ? "true" : "false",
       },
     },
   });

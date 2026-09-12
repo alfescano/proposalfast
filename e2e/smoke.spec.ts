@@ -23,6 +23,19 @@ test("marketing home shows the product demo", async ({ page }) => {
   await expect(demo.getByRole("button", { name: "Next frame" })).toBeVisible();
 });
 
+test("pricing shows founding pro while the window is open", async ({ page }) => {
+  test.skip(
+    Date.now() >= Date.parse("2026-10-01T07:00:00.000Z"),
+    "Founding Pro window has ended",
+  );
+  await page.goto("/pricing");
+  await expect(page.getByRole("heading", { name: /Simple seats/i })).toBeVisible();
+  await expect(page.getByText(/Founding Pro is \$29/i).first()).toBeVisible();
+  await expect(page.getByText(/September 30, 2026/i).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Start Founding Pro/i })).toBeVisible();
+  await expect(page.getByText(/\$49/i).first()).toBeVisible();
+});
+
 test("login page loads", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();

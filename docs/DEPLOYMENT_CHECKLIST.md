@@ -32,6 +32,7 @@ Use this only after local `npm run build` and `npx prisma migrate status` are cl
 
 - [ ] Live (or test-then-live) products/prices for Pro and Business
 - [ ] `STRIPE_SECRET_KEY` + four `STRIPE_PRICE_*` vars
+- [ ] `STRIPE_PRICE_FOUNDING_PRO_MONTHLY` set to a real $29/month Price id before advertising Founding Pro
 - [ ] Webhook endpoint `https://<host>/api/webhooks/stripe`
 - [ ] Events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
 - [ ] `STRIPE_WEBHOOK_SECRET` set

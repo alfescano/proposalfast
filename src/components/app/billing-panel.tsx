@@ -1,6 +1,8 @@
 "use client";
 
 import { PLAN_CATALOG, formatLimit, formatPrice } from "@/lib/plans";
+import type { FoundingOfferState } from "@/lib/founding-offer";
+import { foundingOfferCopy } from "@/lib/founding-offer";
 import { startPlanCheckout, openCustomerPortal } from "@/actions/billing";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -11,14 +13,17 @@ export function BillingPanel({
   status,
   canBill,
   hasCustomer,
+  founding,
 }: {
   currentTier: keyof typeof PLAN_CATALOG;
   status: string;
   canBill: boolean;
   hasCustomer: boolean;
+  founding: FoundingOfferState;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const foundingCopy = foundingOfferCopy(founding);
 
   async function upgrade(tier: "PRO" | "BUSINESS", interval: "month" | "year") {
     setPending(true);
@@ -44,38 +49,56 @@ export function BillingPanel({
         Current plan: <strong>{PLAN_CATALOG[currentTier].name}</strong> ({status}). Paid status
         comes from Stripe webhooks only.
       </p>
+      {founding.active ? (
+        <p className="text-sm text-muted-foreground">
+          {foundingCopy.headline}. {foundingCopy.limit} Monthly Pro Checkout uses the Founding
+          price while this offer is open.
+        </p>
+      ) : null}
       {error ? <ErrorState description={error} /> : null}
       <div className="grid gap-3 md:grid-cols-3">
-        {Object.values(PLAN_CATALOG).map((plan) => (
-          <div key={plan.tier} className="rounded-xl border border-border p-4 text-sm">
-            <p className="font-medium">{plan.name}</p>
-            <p className="mt-1">{formatPrice(plan.monthlyPriceCents)}/mo</p>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {formatLimit(plan.limits.maxAiGenerationsPerMonth)} AI / month
-            </p>
-            {canBill && plan.tier !== "FREE" && plan.tier !== currentTier ? (
-              <div className="mt-3 flex flex-col gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => upgrade(plan.tier as "PRO" | "BUSINESS", "month")}
-                >
-                  Monthly
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={pending}
-                  onClick={() => upgrade(plan.tier as "PRO" | "BUSINESS", "year")}
-                >
-                  Yearly
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        ))}
+        {Object.values(PLAN_CATALOG).map((plan) => {
+          const showFounding = founding.active && plan.tier === "PRO";
+          return (
+            <div key={plan.tier} className="rounded-xl border border-border p-4 text-sm">
+              <p className="font-medium">{showFounding ? "Founding Pro" : plan.name}</p>
+              <p className="mt-1">
+                {formatPrice(showFounding ? founding.monthlyPriceCents : plan.monthlyPriceCents)}/mo
+                {showFounding ? (
+                  <span className="ml-2 text-xs text-muted-foreground line-through">
+                    {formatPrice(founding.regularMonthlyPriceCents)}
+                  </span>
+                ) : null}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {formatLimit(plan.limits.maxAiGenerationsPerMonth)} AI / month
+              </p>
+              {canBill && plan.tier !== "FREE" && plan.tier !== currentTier ? (
+                <div className="mt-3 flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => upgrade(plan.tier as "PRO" | "BUSINESS", "month")}
+                  >
+                    {showFounding
+                      ? `Founding monthly — ${formatPrice(founding.monthlyPriceCents)}`
+                      : "Monthly"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() => upgrade(plan.tier as "PRO" | "BUSINESS", "year")}
+                  >
+                    Yearly
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
       {canBill && hasCustomer ? (
         <Button type="button" variant="outline" onClick={portal} disabled={pending}>

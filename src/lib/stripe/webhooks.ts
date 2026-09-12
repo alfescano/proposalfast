@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { PlanTier, Prisma, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { isFoundingProPriceId } from "@/lib/founding-offer";
 import { PLAN_CATALOG } from "@/lib/plans";
 import { writeAuditLog } from "@/lib/audit";
 import { mail, sendMail } from "@/lib/email";
@@ -275,6 +276,7 @@ async function orgOwner(organizationId: string) {
 
 function inferTier(sub: Stripe.Subscription): PlanTier {
   const priceId = sub.items.data[0]?.price.id;
+  if (isFoundingProPriceId(priceId)) return "PRO";
   for (const tier of Object.keys(PLAN_CATALOG) as PlanTier[]) {
     if (tier === "FREE") continue;
     if (
