@@ -12,6 +12,19 @@ export const emailSchema = z
   .regex(HTML5_EMAIL, "Enter a valid email")
   .transform((value) => value.toLowerCase());
 
+/** Checkbox posts "on"; programmatic callers may pass true. */
+export function isAcceptedTerms(value: unknown): boolean {
+  return value === true || value === "on" || value === "true" || value === "1";
+}
+
+export const TERMS_REQUIRED_MESSAGE =
+  "Agree to the Terms of Service and Privacy Policy to create an account.";
+
+export const acceptTermsSchema = z
+  .unknown()
+  .transform((value) => isAcceptedTerms(value))
+  .refine((value) => value === true, { message: TERMS_REQUIRED_MESSAGE });
+
 export const registerSchema = z
   .object({
     name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
@@ -28,6 +41,7 @@ export const registerSchema = z
       .trim()
       .min(2, "Workspace name must be at least 2 characters")
       .max(80),
+    acceptTerms: acceptTermsSchema,
   })
   .strict();
 

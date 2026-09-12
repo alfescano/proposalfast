@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { acceptInviteAction, registerFromInviteAction } from "@/actions/team";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ErrorState } from "@/components/states/error-state";
+import { TermsAgreeField } from "@/components/auth/auth-form";
 
 export function AcceptInviteForm({ token }: { token: string }) {
   return (
@@ -23,6 +24,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
 
 export function InviteRegisterForm({ token, email }: { token: string; email: string }) {
   const [state, action] = useActionState(registerFromInviteAction, undefined);
+  const [agreed, setAgreed] = useState(false);
   return (
     <form action={action} className="space-y-3 rounded-2xl border border-border bg-card p-5">
       {state && !state.ok ? <ErrorState description={state.error} /> : null}
@@ -39,7 +41,8 @@ export function InviteRegisterForm({ token, email }: { token: string; email: str
         <Label htmlFor="password">Password</Label>
         <Input id="password" name="password" type="password" required minLength={10} />
       </div>
-      <Button type="submit" className="h-10 px-4">
+      <TermsAgreeField checked={agreed} onCheckedChange={setAgreed} />
+      <Button type="submit" disabled={!agreed} className="h-10 px-4">
         Create account and join
       </Button>
     </form>

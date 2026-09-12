@@ -76,6 +76,7 @@ export async function registerAction(
       email: formData.get("email"),
       password: formData.get("password"),
       organizationName: formData.get("organizationName"),
+      acceptTerms: formData.get("acceptTerms"),
     });
     if (!parsed.success) {
       return { ok: false, error: parsed.error.issues[0]?.message ?? "Check the form." };

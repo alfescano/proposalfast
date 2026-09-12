@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { registerAction } from "@/actions/auth";
 import { AuthForm, AuthSwitch, Field } from "@/components/auth/auth-form";
 import { GoogleButton } from "@/components/auth/google-button";
@@ -18,11 +19,27 @@ export default function RegisterPage() {
         You become the Owner. Invite the rest of the team after you subscribe.
       </p>
       <div className="mt-8 space-y-6">
-        {googleEnabled ? <GoogleButton label="Continue with Google" /> : null}
+        {googleEnabled ? (
+          <div className="space-y-2">
+            <GoogleButton label="Continue with Google" />
+            <p className="text-center text-xs text-muted-foreground">
+              By continuing with Google you agree to the{" "}
+              <Link href="/terms" className="text-foreground underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-foreground underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </div>
+        ) : null}
         <AuthForm
           action={registerAction}
           submitLabel="Create workspace"
           pendingLabel="Creating…"
+          requireTerms
           extra={<AuthSwitch href="/login" prompt="Already have an account?" label="Log in" />}
         >
           <Field name="name" label="Your name" autoComplete="name" required minLength={2} />

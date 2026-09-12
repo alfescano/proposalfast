@@ -8,8 +8,34 @@ describe("registerSchema", () => {
       email: "Alex@ProposalFast.com",
       password: "StrongPass1",
       organizationName: "Northline Studio",
+      acceptTerms: true,
     });
     expect(parsed.email).toBe("alex@proposalfast.com");
+    expect(parsed.acceptTerms).toBe(true);
+  });
+
+  it("accepts a checked HTML checkbox value", () => {
+    const parsed = registerSchema.parse({
+      name: "Alex Rivera",
+      email: "alex@proposalfast.com",
+      password: "StrongPass1",
+      organizationName: "Northline Studio",
+      acceptTerms: "on",
+    });
+    expect(parsed.acceptTerms).toBe(true);
+  });
+
+  it("rejects registration without terms acceptance", () => {
+    const result = registerSchema.safeParse({
+      name: "Alex Rivera",
+      email: "alex@proposalfast.com",
+      password: "StrongPass1",
+      organizationName: "Northline Studio",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]?.message).toMatch(/Terms of Service and Privacy Policy/i);
+    }
   });
 
   it("accepts Gmail plus-aliases", () => {
@@ -18,6 +44,7 @@ describe("registerSchema", () => {
       email: "Alf.Escano+pf-smoke@gmail.com",
       password: "StrongPass1",
       organizationName: "ProposalFast",
+      acceptTerms: true,
     });
     expect(parsed.email).toBe("alf.escano+pf-smoke@gmail.com");
     expect(loginSchema.parse({ email: "alf.escano+pf-smoke@gmail.com", password: "x" }).email).toBe(
@@ -31,6 +58,7 @@ describe("registerSchema", () => {
       email: "alex@proposefast.com",
       password: "short",
       organizationName: "Northline",
+      acceptTerms: true,
     });
     expect(result.success).toBe(false);
   });

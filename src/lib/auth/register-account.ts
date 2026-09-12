@@ -42,6 +42,7 @@ export async function registerAccount(input: {
   email: string;
   password: string;
   organizationName: string;
+  acceptTerms: unknown;
 }) {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) {
