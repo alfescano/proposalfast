@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { siteConfig } from "@/lib/site";
 import { PLAN_CATALOG, formatPrice } from "@/lib/plans";
+import { ProductDemo } from "@/components/marketing/product-demo";
 
 const steps = [
   {
@@ -93,6 +94,8 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+
+      <ProductDemo />
 
       <section className="border-t border-border bg-[#152033] text-[#f6f1e8]">
         <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-16 sm:px-6 md:flex-row md:items-end md:justify-between">

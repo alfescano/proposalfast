@@ -6,6 +6,17 @@ test("marketing home loads", async ({ page }) => {
   await expect(page.getByRole("link", { name: /pricing/i }).first()).toBeVisible();
 });
 
+test("marketing home shows the product demo", async ({ page }) => {
+  await page.goto("/");
+  const demo = page.locator("#demo");
+  await expect(demo.getByRole("heading", { name: /From brief to client portal in minutes/i })).toBeVisible();
+  await expect(demo.getByText(/Fees stay placeholders until you fill them/i)).toBeVisible();
+  await expect(demo.locator("video")).toHaveAttribute("src", "/demo.mp4");
+  await expect(demo.locator("video")).toHaveAttribute("poster", "/demo-frames/01.png");
+  await expect(demo.getByRole("img", { name: "Proposalfast — proposals that close" })).toBeVisible();
+  await expect(demo.getByRole("button", { name: "Next frame" })).toBeVisible();
+});
+
 test("login page loads", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
