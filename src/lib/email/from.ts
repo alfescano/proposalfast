@@ -14,7 +14,7 @@ export function parseResendFromEmail(
     return {
       ok: false,
       error:
-        "RESEND_FROM_EMAIL is required. Use noreply@proposefast.com or ProposalFast <noreply@proposefast.com> on a verified Resend domain.",
+        "RESEND_FROM_EMAIL is required. Use noreply@proposalfast.ai or ProposalFast <noreply@proposalfast.ai> on a verified Resend domain.",
     };
   }
   if (/[\r\n]/.test(value)) {
@@ -26,7 +26,7 @@ export function parseResendFromEmail(
   return {
     ok: false,
     error:
-      "RESEND_FROM_EMAIL must look like noreply@proposefast.com or ProposalFast <noreply@proposefast.com>.",
+      "RESEND_FROM_EMAIL must look like noreply@proposalfast.ai or ProposalFast <noreply@proposalfast.ai>.",
   };
 }
 
