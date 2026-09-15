@@ -11,6 +11,11 @@ describe("siteConfig", () => {
     expect(siteConfig.domain).toBe("proposalfast.ai");
     expect(siteConfig.supportEmail).toBe("support@proposalfast.ai");
     expect(siteConfig.email).toBe("support@proposalfast.ai");
+    expect(siteConfig.twitter).toBe("@proposalfast_ai");
+    expect(siteConfig.founder.name).toBe("Alfredo Escano");
+    expect(siteConfig.productHuntLaunchUrl).toContain(
+      "producthunt.com/products/proposalfast-2",
+    );
   });
 
   it("builds Auth/Stripe/OG URLs from NEXT_PUBLIC_APP_URL", async () => {
@@ -31,6 +36,8 @@ describe("siteConfig", () => {
     vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
     const { siteConfig, absoluteUrl } = await import("./site");
     expect(siteConfig.url).toBe("https://proposalfast.ai");
-    expect(absoluteUrl("/sitemap.xml")).toBe("https://proposalfast.ai/sitemap.xml");
+    expect(absoluteUrl("/sitemap.xml")).toBe(
+      "https://proposalfast.ai/sitemap.xml",
+    );
   });
 });

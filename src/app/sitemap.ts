@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { COMPARISONS } from "@/lib/marketing/comparisons";
 import { absoluteUrl } from "@/lib/site";
 
 const routes = [
@@ -7,6 +8,8 @@ const routes = [
   "/pricing",
   "/templates",
   "/about",
+  "/compare",
+  ...COMPARISONS.map((item) => `/compare/${item.slug}`),
   "/contact",
   "/login",
   "/register",
