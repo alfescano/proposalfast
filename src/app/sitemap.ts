@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { getAllPosts, postLastModified } from "@/lib/blog";
 import { COMPARISONS } from "@/lib/marketing/comparisons";
 import { absoluteUrl } from "@/lib/site";
 
@@ -10,6 +11,7 @@ const routes = [
   "/about",
   "/compare",
   ...COMPARISONS.map((item) => `/compare/${item.slug}`),
+  "/blog",
   "/contact",
   "/login",
   "/register",
@@ -21,10 +23,20 @@ const routes = [
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return routes.map((path) => ({
+  const now = new Date();
+  const pages: MetadataRoute.Sitemap = routes.map((path) => ({
     url: absoluteUrl(path),
-    lastModified: new Date(),
-    changeFrequency: path === "/" ? "weekly" : "monthly",
-    priority: path === "/" ? 1 : 0.6,
+    lastModified: now,
+    changeFrequency: path === "/" || path === "/blog" ? "weekly" : "monthly",
+    priority: path === "/" ? 1 : path === "/blog" ? 0.7 : 0.6,
   }));
+
+  const posts: MetadataRoute.Sitemap = getAllPosts().map((post) => ({
+    url: absoluteUrl(`/blog/${post.slug}`),
+    lastModified: postLastModified(post),
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  return [...pages, ...posts];
 }

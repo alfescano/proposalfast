@@ -10,6 +10,7 @@ const columns = [
       { href: "/templates", label: "Templates" },
       { href: "/pricing", label: "Pricing" },
       { href: "/compare", label: "Compare" },
+      { href: "/blog", label: "Blog" },
       { href: "/security", label: "Security" },
     ],
   },
@@ -17,6 +18,7 @@ const columns = [
     title: "Company",
     links: [
       { href: "/about", label: "About" },
+      { href: "/blog", label: "Blog" },
       { href: "/contact", label: "Contact" },
       { href: "/login", label: "Log in" },
     ],
