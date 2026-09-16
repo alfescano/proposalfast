@@ -5,6 +5,8 @@ const pdfkitFontGlobs = [
   "./node_modules/pdfkit/js/data/**/*",
 ];
 
+const blogContentGlobs = ["./content/blog/**/*.md"];
+
 const nextConfig: NextConfig = {
   // pdfkit loads Helvetica.cjs (and Times) from disk. Bundling drops those files
   // and Vercel fails with "Cannot find module .../pdfkit/js/standard-fonts/Helvetica.cjs".
@@ -19,7 +21,7 @@ const nextConfig: NextConfig = {
     "pdfkit",
   ],
   outputFileTracingIncludes: {
-    "/*": pdfkitFontGlobs,
+    "/*": [...pdfkitFontGlobs, ...blogContentGlobs],
     "/proposals/[id]/pdf": pdfkitFontGlobs,
   },
   images: {
