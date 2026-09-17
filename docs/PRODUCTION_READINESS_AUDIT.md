@@ -142,8 +142,8 @@ Do **not** paste secret keys into chat. Create them in each vendor dashboard and
 
 ### Resend (required to send email in production)
 
-1. Create a Resend account. Add and verify `proposefast.com` (SPF/DKIM/DMARC as Resend instructs).
-2. Create an API key. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (e.g. `ProposalFast <noreply@proposefast.com>`).
+1. Create a Resend account. Add and verify `proposalfast.ai` (SPF/DKIM/DMARC as Resend instructs). `proposefast.com` remains a valid sending domain if it is still verified.
+2. Create an API key. Set `RESEND_API_KEY` and `RESEND_FROM_EMAIL` (e.g. `ProposalFast <noreply@proposalfast.ai>`).
 3. Without these, production email **throws** — it will not silently succeed.
 
 ### Stripe (required for paid plans and proposal Checkout)

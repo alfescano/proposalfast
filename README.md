@@ -120,7 +120,7 @@ The app **does not** flip a plan because a button was clicked. Stripe webhooks w
 
 ## Resend
 
-Authenticate your sending domain (currently `proposefast.com`, or whichever domain is verified in Resend) and set `RESEND_FROM_EMAIL`. Do not change Namecheap Private Email MX for `support@proposalfast.ai`. The `EmailAdapter` interface is the swap point if you change providers.
+Authenticate your sending domain and set `RESEND_FROM_EMAIL` (e.g. `ProposalFast <noreply@proposalfast.ai>`). Canonical brand domain is `proposalfast.ai`. `proposefast.com` remains valid if that domain is still verified in Resend. Do not change Namecheap Private Email MX for `support@proposalfast.ai`. The `EmailAdapter` interface is the swap point if you change providers.
 
 ## S3 / R2
 
