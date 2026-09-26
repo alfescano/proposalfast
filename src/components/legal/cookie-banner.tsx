@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { COOKIE_CONSENT_EVENT, COOKIE_CONSENT_KEY } from "@/lib/pwa";
 
-const KEY = "pf_cookie_consent";
+const KEY = COOKIE_CONSENT_KEY;
 
 export function CookieBanner() {
   const [visible, setVisible] = useState(false);
@@ -23,6 +24,7 @@ export function CookieBanner() {
     } catch {
       /* ignore quota */
     }
+    window.dispatchEvent(new Event(COOKIE_CONSENT_EVENT));
     setVisible(false);
   }
 
