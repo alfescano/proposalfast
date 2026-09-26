@@ -13,6 +13,8 @@ describe("siteConfig", () => {
     expect(siteConfig.email).toBe("support@proposalfast.ai");
     expect(siteConfig.twitter).toBe("@proposalfast_ai");
     expect(siteConfig.founder.name).toBe("Alfredo Escano");
+    expect(siteConfig.themeColor).toBe("#152033");
+    expect(siteConfig.backgroundColor).toBe("#f6f1e8");
     expect(siteConfig.productHuntLaunchUrl).toContain(
       "producthunt.com/products/proposalfast-2",
     );

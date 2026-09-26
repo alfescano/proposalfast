@@ -18,6 +18,10 @@ export const siteConfig = {
     quote:
       "I built this because ‘quick questions’ and version chaos were killing deals more than the writing was.",
   },
+  /** Ink. Status bar / theme-color. Matches --ink in globals.css. */
+  themeColor: "#152033",
+  /** Paper. Installed-app splash behind the icon. Matches --paper. */
+  backgroundColor: "#f6f1e8",
 };
 
 export function absoluteUrl(path = "/") {
