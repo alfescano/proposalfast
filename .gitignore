@@ -51,3 +51,22 @@ next-env.d.ts
 /agent-tools
 /tmp-scaffold
 /tmp
+
+# Capacitor native build output. The ios/ and android/ projects themselves
+# are committed. Do not commit SDK paths, signing keys, or local build caches.
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/app/*.iml
+*.keystore
+*.jks
+ios/App/Pods/
+ios/App/build/
+ios/App/.build/
+ios/DerivedData/
+ios/**/xcuserdata/
+*.xcuserstate
