@@ -1,0 +1,61 @@
+{
+	"appId": "ai.proposalfast.app",
+	"appName": "ProposalFast",
+	"webDir": "native/www",
+	"backgroundColor": "#f6f1e8",
+	"zoomEnabled": false,
+	"appendUserAgent": "ProposalFastShell",
+	"android": {
+		"allowMixedContent": false,
+		"backgroundColor": "#f6f1e8"
+	},
+	"ios": {
+		"contentInset": "automatic",
+		"backgroundColor": "#f6f1e8",
+		"preferredContentMode": "mobile"
+	},
+	"server": {
+		"url": "https://proposalfast.ai",
+		"androidScheme": "https",
+		"cleartext": false,
+		"allowNavigation": [
+			"proposalfast.ai",
+			"*.proposalfast.ai",
+			"accounts.google.com",
+			"google.com",
+			"*.google.com",
+			"*.googleusercontent.com",
+			"*.youtube.com",
+			"checkout.stripe.com",
+			"billing.stripe.com",
+			"hooks.stripe.com",
+			"stripe.com",
+			"*.stripe.com",
+			"*.stripe.network"
+		]
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": true,
+			"launchShowDuration": 1500,
+			"launchFadeOutDuration": 200,
+			"backgroundColor": "#f6f1e8",
+			"androidSplashResourceName": "splash",
+			"androidScaleType": "CENTER_INSIDE",
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "LIGHT",
+			"backgroundColor": "#f6f1e8",
+			"overlaysWebView": false
+		},
+		"SystemBars": {
+			"insetsHandling": "native",
+			"style": "LIGHT"
+		}
+	},
+	"packageClassList": [
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
+	]
+}

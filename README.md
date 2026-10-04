@@ -178,6 +178,14 @@ Sync URL: `http://127.0.0.1:43127/api/inngest`
 | `npm run db:migrate` | `prisma migrate dev` |
 | `npm run db:seed` | Seed plans, templates, optional sample data |
 | `npm run lint` | ESLint |
+| `npm run cap:sync` | Copy the Capacitor shell config into `android/` and `ios/` |
+| `npm run cap:open:android` | Open the Android project in Android Studio |
+| `npm run cap:open:ios` | Open the iOS project in Xcode (Mac only) |
+| `npm run cap:android:debug` | Sync, then build a debug APK with Gradle |
+
+## Native apps (App Store and Play)
+
+The iOS and Android shells live in `ios/` and `android/`. They load the live site in a WebView. They do not replace the PWA. Bundle id: `ai.proposalfast.app`. Store signing, TestFlight, and Play internal testing are documented in [docs/native-apps.md](docs/native-apps.md). Archiving the iOS app needs a Mac.
 
 ## Product rules
 
