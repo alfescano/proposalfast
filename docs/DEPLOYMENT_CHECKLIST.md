@@ -24,8 +24,8 @@ Use this only after local `npm run build` and `npx prisma migrate status` are cl
 
 ## 3. Email (blocking if you send proposals)
 
-- [ ] Resend domain authenticated (SPF/DKIM)
-- [ ] `RESEND_API_KEY` and `RESEND_FROM_EMAIL` set
+- [ ] Resend domain authenticated (SPF/DKIM) — prefer `proposalfast.ai`; `proposefast.com` remains valid if still verified
+- [ ] `RESEND_API_KEY` and `RESEND_FROM_EMAIL` set (e.g. `ProposalFast <noreply@proposalfast.ai>`)
 - [ ] Send a real verification email to yourself from the production register flow
 
 ## 4. Stripe (blocking if you charge)

@@ -122,7 +122,7 @@ Point DNS at Vercel **after** the Vercel project exists and the domain is added 
 | A | `@` | `76.76.21.21` | Automatic / 30 min |
 | CNAME | `www` | `cname.vercel-dns.com.` | Automatic / 30 min |
 
-Also add any **Resend** SPF/DKIM (and optional DMARC) TXT records on the **sending** domain (still `proposefast.com` unless you verify a new one). Do not invent new email secrets.
+Also add any **Resend** SPF/DKIM (and optional DMARC) TXT records on the **sending** domain (`proposalfast.ai` is the canonical brand domain; `proposefast.com` remains valid if still verified). Do not invent new email secrets.
 
 **Important:** The A/CNAME values above are Vercel’s usual defaults. The **final** host and value **must match the Vercel Domains panel for this project**. If Vercel shows a different A record or a unique CNAME, use those instead of this table.
 
@@ -153,7 +153,7 @@ Then:
 | Name | Where to create the value |
 | --- | --- |
 | `RESEND_API_KEY` | [resend.com](https://resend.com) → API Keys |
-| `RESEND_FROM_EMAIL` | After the domain is authenticated: `ProposalFast <noreply@proposefast.com>` or `noreply@proposefast.com`. Bare names without an address fail. Plus-aliases in the recipient (`you+tag@gmail.com`) are valid. |
+| `RESEND_FROM_EMAIL` | After the domain is authenticated: `ProposalFast <noreply@proposalfast.ai>` or `noreply@proposalfast.ai`. `proposefast.com` remains valid if that domain is still verified. Bare names without an address fail. Plus-aliases in the recipient (`you+tag@gmail.com`) are valid. |
 
 ### Required to charge (subscriptions + proposal Checkout)
 
@@ -226,10 +226,10 @@ Subscriptions update **only** from this verified webhook. The Checkout success p
 
 ## 5. Resend domain
 
-1. [resend.com](https://resend.com) → **Domains → Add** `proposefast.com`.
+1. [resend.com](https://resend.com) → **Domains → Add** `proposalfast.ai` (canonical brand domain). `proposefast.com` remains a valid verified domain if still in use.
 2. Add the SPF / DKIM / (optional DMARC) records Resend shows at the same DNS host you used for Vercel.
 3. Wait until Resend marks the domain **Verified**.
-4. Set `RESEND_FROM_EMAIL` to an address on that domain.
+4. Set `RESEND_FROM_EMAIL` to an address on that domain (e.g. `ProposalFast <noreply@proposalfast.ai>`).
 5. Production **throws** if `RESEND_API_KEY` is missing — it will not pretend mail was sent.
 
 ---
